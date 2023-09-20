@@ -7482,7 +7482,7 @@ a.anchor-link {
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
 <h1 id="Timbre-Trap">Timbre-Trap<a class="anchor-link" href="#Timbre-Trap">¶</a></h1><p>This demo page is for the paper <strong>Timbre-Trap: A Low-Resource Framework for Instrument-Agnostic Music Transcription</strong></p>
-<p><strong>Source code:</strong> TBR</p>
+<p>Source code: <a href="https://github.com/sony/timbre-trap">https://github.com/sony/timbre-trap</a></p>
 </div>
 </div>
 </div>
@@ -7499,31 +7499,15 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noInput">
-<div class="jp-Cell-outputWrapper">
-<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
-</div>
-<div class="jp-OutputArea jp-Cell-outputArea">
-<div class="jp-OutputArea-child jp-OutputArea-executeResult">
-<div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/html" tabindex="0">
-<style>
-.myaudio {
-    controlslist: noplaybackrate;
-    width: 200px;
-    controls
-}
-</style>
-</div>
-</div>
-</div>
-</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs jp-mod-noInput">
 </div>
 <div class="jp-Cell jp-MarkdownCell jp-Notebook-cell">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h2 id="Audio-Samples">Audio Samples<a class="anchor-link" href="#Audio-Samples">¶</a></h2><h3 id="Without-Skip-Connections">Without Skip Connections<a class="anchor-link" href="#Without-Skip-Connections">¶</a></h3><p>In this section, we provide examples of audio clips produced by the CQT coeiffient for the transcription and the reconstruction by the model without skip connections.</p>
+<h2 id="Audio-Samples">Audio Samples<a class="anchor-link" href="#Audio-Samples">¶</a></h2><h3 id="Timbre-Trap">Timbre-Trap<a class="anchor-link" href="#Timbre-Trap">¶</a></h3><p>Timbre-Trap reconstructs the CQT coefficents when the latent space switch is in "on" state (Reconstruction).
+It removes timbre from the audio clips when the latent space switch is in "off" state (Sonification).</p>
 <table border="0">
 <pre><code>  </code></pre>
 <p><tr>
@@ -7551,7 +7535,7 @@ a.anchor-link {
 <td style="text-align: center"><audio class="myaudio" controls="" src="audio/01-AchGottundHerr-violin_rec.mp3">alternative text</audio><br/></td>
 </tr>
 <tr>
-<td style="text-align: left"><b style="font-size:14px">Sonified<br/>Transcription</b></td>
+<td style="text-align: left"><b style="font-size:14px">Sonification<br/>Transcription</b></td>
 <td style="text-align: center"><audio class="myaudio" controls="" src="audio/01-AchGottundHerr_scr.mp3">alternative text</audio><br/></td>
 <td style="text-align: center"><audio class="myaudio" controls="" src="audio/01-AchGottundHerr-bassoon_scr.mp3">alternative text</audio><br/></td>
 <td style="text-align: center"><audio class="myaudio" controls="" src="audio/01-AchGottundHerr-clarinet_scr.mp3">alternative text</audio><br/></td>
@@ -7568,7 +7552,8 @@ a.anchor-link {
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h3 id="With-Skip-Connections">With Skip Connections<a class="anchor-link" href="#With-Skip-Connections">¶</a></h3><p>In this section, we provide examples of audio clips produced by the CQT coeiffient for the transcription and the reconstruction by the model with skip connections.</p>
+<h3 id="Timbre-Trap-with-Skip-Connections">Timbre-Trap with Skip-Connections<a class="anchor-link" href="#Timbre-Trap-with-Skip-Connections">¶</a></h3><p>With skip-connections, Timbre-Trap reconstructs CQT coefficents very close to the original audio, resulting in a very high SDR.</p>
+<p>But the sonification retains more timbre information than the Timbre-Trap without skip-connections, resulting in a slower F1-score.</p>
 <table border="0">
 <pre><code>  </code></pre>
 <p><tr>
@@ -7596,7 +7581,7 @@ a.anchor-link {
 <td style="text-align: center"><audio class="myaudio" controls="" src="audio2/01-AchGottundHerr-violin_rec.mp3">alternative text</audio><br/></td>
 </tr>
 <tr>
-<td style="text-align: left"><b style="font-size:14px">Sonified<br/>Transcription</b></td>
+<td style="text-align: left"><b style="font-size:14px">Sonification<br/>Transcription</b></td>
 <td style="text-align: center"><audio class="myaudio" controls="" src="audio2/01-AchGottundHerr_scr.mp3">alternative text</audio><br/></td>
 <td style="text-align: center"><audio class="myaudio" controls="" src="audio2/01-AchGottundHerr-bassoon_scr.mp3">alternative text</audio><br/></td>
 <td style="text-align: center"><audio class="myaudio" controls="" src="audio2/01-AchGottundHerr-clarinet_scr.mp3">alternative text</audio><br/></td>
@@ -7613,24 +7598,111 @@ a.anchor-link {
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h2 id="Visualization">Visualization<a class="anchor-link" href="#Visualization">¶</a></h2><p>The transcription and reconstruction produced by the model without skip connection</p>
+<h2 id="Visualization">Visualization<a class="anchor-link" href="#Visualization">¶</a></h2><p>The reconstruction and transcription produced by Timbre-Trap with and without skip-connections</p>
+<h3 id="Bach10">Bach10<a class="anchor-link" href="#Bach10">¶</a></h3><table>
+<tr>
+<td style="text-align: center"><b style="font-size:150%">Timbre-Trap</b></td>
+<td style="text-align: center"><b style="font-size:150%">Timbre-Trap with Skip-Connections</b></td>
+</tr>
+<tr>
+<td style="text-align: left">
 <table border="0">
 <tr>
 <td style="text-align: left"><b style="font-size:14px"></b></td>
-<td style="text-align: center; font-size:150%">Ground Truth</td>
-<td style="text-align: center; font-size:150%">Prediction</td>
+<td style="text-align: center; font-size:100%">Ground Truth</td>
+<td style="text-align: center; font-size:100%">Prediction</td>
 </tr>
 <tr>
-<td style="text-align: left"><b style="font-size:14px">Magnitude CQT</b></td>
+<td style="text-align: left"><b style="font-size:14px">Reconstruction</b></td>
 <td style="text-align: center"><img alt="sample0" class="image" src="img/bach10_ori.png" width="300"/></td>
 <td style="text-align: center"><img alt="sample0" class="image" src="img/bach10_rec.png" width="300"/></td>
 </tr>
 <tr>
-<td style="text-align: left"><b style="font-size:14px">Transcribed<br/>Posteriorgram</b></td>
+<td style="text-align: left"><b style="font-size:14px">Transcription</b></td>
 <td style="text-align: center"><img alt="sample0" class="image" src="img/bach10_truth.png" width="300"/></td>
 <td style="text-align: center"><img alt="sample1" class="image" src="img/bach10_mpe.png" width="300"/></td>
 </tr>
 </table>
+</td>
+<td style="text-align: center">
+<table>
+<tr>
+<td style="text-align: center; font-size:100%">Ground Truth</td>
+<td style="text-align: center; font-size:100%">Prediction</td>
+</tr>
+<tr>
+<td style="text-align: center"><img alt="sample0" class="image" src="img/bach10_ori.png" width="300"/></td>
+<td style="text-align: center"><img alt="sample0" class="image" src="img2/bach10_rec.png" width="300"/></td>
+</tr>
+<tr>
+<td style="text-align: center"><img alt="sample0" class="image" src="img/bach10_truth.png" width="300"/></td>
+<td style="text-align: center"><img alt="sample1" class="image" src="img2/bach10_mpe.png" width="300"/></td>
+</tr>
+</table>
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<h3 id="Su">Su<a class="anchor-link" href="#Su">¶</a></h3><table>
+<tr>
+<td style="text-align: center"><b style="font-size:150%">Timbre-Trap</b></td>
+<td style="text-align: center"><b style="font-size:150%">Timbre-Trap with Skip-Connections</b></td>
+</tr>
+<tr>
+<td style="text-align: left">
+<table border="0">
+<tr>
+<td style="text-align: left"><b style="font-size:14px"></b></td>
+<td style="text-align: center; font-size:100%">Ground Truth</td>
+<td style="text-align: center; font-size:100%">Prediction</td>
+</tr>
+<tr>
+<td style="text-align: left"><b style="font-size:14px">Reconstruction</b></td>
+<td style="text-align: center"><img alt="sample0" class="image" src="img/su_ori.png" width="300"/></td>
+<td style="text-align: center"><img alt="sample0" class="image" src="img/su_rec.png" width="300"/></td>
+</tr>
+<tr>
+<td style="text-align: left"><b style="font-size:14px">Transcription</b></td>
+<td style="text-align: center"><img alt="sample0" class="image" src="img/su_truth.png" width="300"/></td>
+<td style="text-align: center"><img alt="sample1" class="image" src="img/su_mpe.png" width="300"/></td>
+</tr>
+</table>
+</td>
+<td style="text-align: center">
+<table>
+<tr>
+<td style="text-align: center; font-size:100%">Ground Truth</td>
+<td style="text-align: center; font-size:100%">Prediction</td>
+</tr>
+<tr>
+<td style="text-align: center"><img alt="sample0" class="image" src="img/su_ori.png" width="300"/></td>
+<td style="text-align: center"><img alt="sample0" class="image" src="img2/su_rec.png" width="300"/></td>
+</tr>
+<tr>
+<td style="text-align: center"><img alt="sample0" class="image" src="img/su_truth.png" width="300"/></td>
+<td style="text-align: center"><img alt="sample1" class="image" src="img2/su_mpe.png" width="300"/></td>
+</tr>
+</table>
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
 </div>
 </div>
 </div>
