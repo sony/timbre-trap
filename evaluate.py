@@ -1,6 +1,7 @@
 from datasets import NoteDataset, constants
 from datasets.utils import threshold
 from models.utils import filter_non_peaks
+from models import TranscriberMag, TranscriberMagDB
 from models.objectives import *
 from utils import *
 
@@ -176,8 +177,16 @@ def evaluate(model, eval_set, multipliers, writer=None, i=0, device='cpu'):
             # Perform transcription and reconstruction simultaneously
             reconstruction, latents, transcription, losses = model(audio)
 
-            # Extract magnitude of decoded coefficients and convert to activations
-            transcription = torch.nn.functional.tanh(model.sliCQ.to_magnitude(transcription))
+            if not isinstance(model, TranscriberMag):
+                # Compute magnitude of decoded coefficients
+                transcription = model.sliCQ.to_magnitude(transcription)
+            else:
+                # Remove channel dimension from magnitude
+                transcription = transcription.squeeze(-3)
+
+            if not isinstance(model, TranscriberMagDB):
+                # Convert magnitude coefficients to activations
+                transcription = torch.nn.functional.tanh(transcription)
 
             # Determine the times associated with predictions
             times_est = model.sliCQ.get_times(model.sliCQ.get_expected_frames(audio.size(-1)))
@@ -199,16 +208,25 @@ def evaluate(model, eval_set, multipliers, writer=None, i=0, device='cpu'):
             # Store the computed results
             evaluator.append_results(results)
 
-            # Invert reconstructed spectral coefficients to synthesize audio
-            synth = model.sliCQ.decode(reconstruction)
+            if not isinstance(model, TranscriberMag):
+                # Invert reconstructed spectral coefficients to synthesize audio
+                synth = model.sliCQ.decode(reconstruction)
 
-            # Compute SDR w.r.t. original (padded) audio
-            sdr = sdr_module(synth, audio).item()
-            # Store the SDR for the track
-            evaluator.append_results({'reconstruction/SDR' : sdr})
+                # Compute SDR w.r.t. original (padded) audio
+                sdr = sdr_module(synth, audio).item()
+                # Store the SDR for the track
+                evaluator.append_results({'reconstruction/SDR' : sdr})
 
             # Obtain spectral coefficients of audio
             coefficients = model.sliCQ(audio)
+
+            if isinstance(model, TranscriberMag):
+                # Convert coefficients to magnitude for reconstruction loss
+                coefficients = model.sliCQ.to_magnitude(coefficients).unsqueeze(-3)
+
+            if isinstance(model, TranscriberMagDB):
+                # Convert magnitude to rescaled decibels
+                coefficients = model.sliCQ.to_decibels(coefficients)
 
             # Compute the reconstruction loss for the batch
             reconstruction_loss = compute_reconstruction_loss(reconstruction, coefficients)
