@@ -1,0 +1,9 @@
+*generated/
+
+*__pycache__/
+.idea
+
+*.DS_Store
+*.ipynb
+
+ismir2017-deepsalience

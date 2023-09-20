@@ -1,0 +1,20 @@
+--extra-index-url https://download.pytorch.org/whl/cu118
+torch==2.0.0+cu118
+torchaudio==2.0.1
+scipy
+numpy
+librosa
+tensorboard
+tqdm
+sacred
+requests
+mir_eval
+pandas
+mido
+pyyaml
+cqt_pytorch
+torchmetrics
+matplotlib
+basic-pitch
+jams
+sklearn
