@@ -194,6 +194,117 @@ class Transcriber(nn.Module):
         return reconstruction, latents, transcription, losses
 
 
+class TranscriberFiLM(Transcriber):
+    """
+    Variant of autoencoder with FiLM layer before decoder.
+    """
+
+    def __init__(self, sample_rate, n_octaves, bins_per_octave, secs_per_block=3, latent_size=None, model_complexity=1, skip_connections=False):
+        """
+        Initialize the full autoencoder.
+
+        Parameters
+        ----------
+        See Transcriber class...
+        """
+
+        Transcriber.__init__(self, sample_rate, n_octaves, bins_per_octave, secs_per_block,
+                                   latent_size, model_complexity, skip_connections)
+
+        if latent_size is None:
+            latent_size = self.decoder.convin.in_channels - 1
+
+        convin_out_channels = self.decoder.convin[0].out_channels
+        convin_kernel_size = self.decoder.convin[0].kernel_size
+
+        self.decoder.convin = nn.Sequential(
+            nn.ConvTranspose2d(latent_size, convin_out_channels, kernel_size=convin_kernel_size),
+            nn.ELU(inplace=True)
+        )
+
+        # Initialize the FiLM conditioning layer
+        self.film_layer = FiLM(latent_size, n_conditions=2)
+
+    def decode(self, latents, embeddings=None, transcribe=False):
+        """
+        Decode a batch of latent codes into logits representing real/imaginary coefficients.
+
+        Parameters
+        ----------
+        latents : Tensor (B x D_lat x T)
+          Batch of latent codes
+        embeddings : list of [Tensor (B x C x H x T)] or None (no skip connections)
+          Embeddings produced by encoder at each level
+        transcribe : bool
+          Switch for performing transcription vs. reconstruction
+
+        Returns
+        ----------
+        coefficients : Tensor (B x 2 x F X T)
+          Batch of output logits [-∞, ∞]
+        """
+
+        # Create a one-hot vector indicating which function to perform [transcription, reconstruction]
+        condition = torch.tensor([transcribe, not transcribe], dtype=latents.dtype, device=latents.device)
+        # Process latent vector with FiLM layer
+        latents = self.film_layer(latents, condition)
+
+        # Decode latent vectors into real/imaginary coefficients
+        coefficients = self.decoder(latents, embeddings)
+
+        return coefficients
+
+
+class FiLM(nn.Module):
+    """
+    Implements an FiLM conditioning layer.
+    """
+
+    def __init__(self, embedding_size, n_conditions):
+        """
+        Initialize the layer.
+
+        Parameters
+        ----------
+        embedding_size : int
+          Dimensionality of input features
+        n_conditions : int
+          Number of conditions allowable
+        """
+
+        super().__init__()
+
+        # Initialize linear layers
+        self.gamma = nn.Linear(n_conditions, embedding_size)
+        self.beta = nn.Linear(n_conditions, embedding_size)
+
+    def forward(self, x, condition):
+        """
+        Feed features through the FiLM layer.
+
+        Parameters
+        ----------
+        x : Tensor (B x D_lat x T)
+          Batch of input embeddings
+        condition : Tensor (n_conditions)
+          One-hot vector indicating condition
+
+        Returns
+        ----------
+        y : Tensor (B x D_lat x T)
+          Batch of output embeddings
+        """
+
+        # Swap time and feature dimension
+        x = x.transpose(-1, -2)
+        # Apply gamma and beta to input embeddings
+        y = x * self.gamma(condition) + self.beta(condition)
+        # Restore original dimension order
+        y = y.transpose(-1, -2)
+
+        return y
+
+
 class Encoder(nn.Module):
     """
     Implements a variational 2D convolutional encoder.

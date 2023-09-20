@@ -3,7 +3,7 @@ from datasets.MixedMultiPitch import URMP as URMP_Mixtures, Bach10 as Bach10_Mix
 from datasets.AudioStems import MedleyDB as MedleyDB_Stems
 from datasets.AudioMixtures import MedleyDB as MedleyDB_Mixtures, FMA
 from datasets import ComboDataset, constants
-from models import DataParallel, Transcriber
+from models import DataParallel, Transcriber, TranscriberFiLM
 
 from evaluate import evaluate
 from models.objectives import *
