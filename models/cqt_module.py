@@ -147,7 +147,6 @@ class CQT(_CQT):
 
         TODO - move 0 dB only if maximum is higher?
              - currently it's consistent with previous dB scaling
-             - currently it's only used for visualization
 
         Parameters
         ----------
@@ -162,14 +161,23 @@ class CQT(_CQT):
           Batch of magnitude coefficients (dB)
         """
 
-        # Initialize a differentiable conversion to decibels
-        decibels = AmplitudeToDB(stype='amplitude', top_db=80)(magnitude)
+        decibels = list()
 
-        if rescale:
-            # Make 0 dB ceiling
-            decibels -= decibels.max()
-            # Rescale decibels to range [0, 1]
-            decibels = 1 + decibels / 80
+        for m in magnitude:
+            # Convert to decibels
+            d = AmplitudeToDB(stype='amplitude', top_db=80)(m)
+
+            if rescale:
+                # Make 0 dB ceiling
+                d -= d.max()
+                # Rescale decibels to range [0, 1]
+                d = 1 + d / 80
+
+            # Add converted sample to list
+            decibels.append(d.unsqueeze(0))
+
+        # Reconstruct original batch
+        decibels = torch.cat(decibels, dim=0)
 
         return decibels
 
