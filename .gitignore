@@ -6,4 +6,7 @@
 *.DS_Store
 *.ipynb
 
+*.egg
+*.egg-info
+
 ismir2017-deepsalience

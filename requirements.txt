@@ -17,4 +17,4 @@ torchmetrics
 matplotlib
 basic-pitch
 jams
-sklearn
+scikit-learn

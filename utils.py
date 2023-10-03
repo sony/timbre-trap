@@ -5,23 +5,17 @@ import numpy as np
 import random
 import torch
 import math
-import time
 
 
 __all__ = [
     'seed_everything',
-    'rescale_decibels',
-    'decibels_to_amplitude',
     'to_array',
     'print_and_log',
-    'get_current_time',
-    'print_time_difference',
     'initialize_figure',
     'plot_magnitude',
     'plot_latents',
     'track_gradient_norms',
     'CosineWarmup',
-    'cyclic_anneal',
 ]
 
 
@@ -43,60 +37,6 @@ def seed_everything(seed):
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
     random.seed(seed)
-
-
-def rescale_decibels(decibels, negative_infinity_dB=-80):
-    """
-    Log-scale a tensor of decibel values between 0 and 1.
-
-    Parameters
-    ----------
-    decibels : ndarray or Tensor
-      Tensor of decibel values with a ceiling of 0
-    negative_infinity_dB : float
-      Decibel cutoff beyond which is considered negative infinity
-
-    Returns
-    ----------
-    scaled : ndarray or Tensor
-      Decibel values scaled logarithmically between 0 and 1
-    """
-
-    # Make sure provided lower boundary is positive
-    negative_infinity_dB = abs(negative_infinity_dB)
-
-    # Scale decibels to be between 0 and 1
-    scaled = 1 + (decibels / negative_infinity_dB)
-
-    return scaled
-
-
-def decibels_to_amplitude(decibels, negative_infinity_dB=-80):
-    """
-    Convert a tensor of decibel values to amplitudes between 0 and 1.
-
-    Parameters
-    ----------
-    decibels : ndarray or Tensor
-      Tensor of decibel values with a ceiling of 0
-    negative_infinity_dB : float
-      Decibel cutoff beyond which is considered negative infinity
-
-    Returns
-    ----------
-    gain : ndarray or Tensor
-      Tensor of values linearly scaled between 0 and 1
-    """
-
-    # Make sure provided lower boundary is negative
-    negative_infinity_dB = -abs(negative_infinity_dB)
-
-    # Convert decibels to a gain between 0 and 1
-    gain = 10 ** (decibels / 20)
-    # Set gain of values below -∞ to 0
-    gain[decibels <= negative_infinity_dB] = 0
-
-    return gain
 
 
 def to_array(tensor):
@@ -139,63 +79,6 @@ def print_and_log(text, path=None):
         with open(path, 'a') as f:
             # Append the text to the file
             print(text, file=f)
-
-
-def get_current_time(decimals=3):
-    """
-    Determine the current system time.
-
-    Parameters
-    ----------
-    decimals : int
-      Number of digits to keep when rounding
-
-    Returns
-    ----------
-    current_time : float
-      Current system time
-    """
-
-    # Get current time rounded to specified number of digits
-    current_time = round(time.time(), decimals)
-
-    return current_time
-
-
-def print_time_difference(start_time, label=None, decimals=3):
-    """
-    Print the time elapsed since the given system time.
-
-    Parameters
-    ----------
-    start_time : float
-      Arbitrary system time
-    decimals : int
-      Number of digits to keep when rounding
-    label : string or None (Optional)
-      Label for the optional print statement
-
-    Returns
-    ----------
-    elapsed_time : float
-      Time elapsed since specified time
-    """
-
-    # Take rounded difference between current time and given time
-    elapsed_time = round(get_current_time(decimals) - start_time, decimals)
-
-    # Initialize string to print
-    message = 'Time'
-
-    if label is not None:
-        # Add label if it was specified
-        message += f' ({label})'
-
-    # Add the time to the string
-    message += f' : {elapsed_time}'
-
-    # Print constructed string
-    print(message)
 
 
 def initialize_figure(figsize=(9, 3), interactive=False):
@@ -454,35 +337,3 @@ class CosineWarmup(torch.optim.lr_scheduler.LRScheduler):
         lr = [scaling * base_lr for base_lr in self.base_lrs]
 
         return lr
-
-
-def cyclic_anneal(i, n_steps, ratio=0.5):
-    """
-    Obtain a cyclic scaling factor for learning rate scheduling.
-
-    See https://github.com/haofuml/cyclical_annealing for more information...
-
-    Parameters
-    ----------
-    i : int
-      Current step
-    n_steps : int
-      Number of steps for one cycle
-    ratio : float [0, 1]
-      Percentage of cycle used for annealing
-
-    Returns
-    ----------
-    scaling : float [0, 1]
-      Percentage scaling for current step
-    """
-
-    # Determine relative number of steps within current cycle
-    relative_steps = i % n_steps
-
-    # Determine number of annealing steps
-    n_rise = round(ratio * n_steps)
-    # Compute scaling within range [0.0, 1.0]
-    scaling = min(1, relative_steps / n_rise)
-
-    return scaling
