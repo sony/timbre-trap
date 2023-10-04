@@ -14,7 +14,6 @@ __all__ = [
     'stream_url_resource',
     'unzip_and_remove',
     'change_base_dir',
-    'threshold',
     'separate_ground_truth'
 ]
 
@@ -116,31 +115,6 @@ def change_base_dir(new_dir, old_dir):
 
     # Remove the (now empty) old top-level directory
     os.rmdir(old_dir)
-
-
-def threshold(_arr, t=0.5):
-    """
-    Binarize data based on a given threshold.
-
-    Parameters
-    ----------
-    _arr : ndarray
-      Original data
-    t : float [0, 1]
-      Threshold value
-
-    Returns
-    ----------
-    arr : ndarray
-      Binarized data
-    """
-
-    # Initialize an array to hold binarized data
-    arr = np.zeros(_arr.shape)
-    # Set values above threshold to one
-    arr[_arr >= t] = 1
-
-    return arr
 
 
 def separate_ground_truth(batch):

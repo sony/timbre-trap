@@ -30,7 +30,6 @@ class MedleyDB(BaseDataset):
         for multitrack in self.available_multitracks():
             # Construct a path to the YAML-encoded metadata
             yaml_path = os.path.join(self.base_dir, 'Metadata', f'{multitrack}_METADATA.yaml')
-            #yaml_path = os.path.join(self.base_dir, 'Audio', multitrack, f'{multitrack}_METADATA.yaml')
 
             with open(yaml_path, 'r') as file:
                 # Load the multitrack metadata into the dictionary

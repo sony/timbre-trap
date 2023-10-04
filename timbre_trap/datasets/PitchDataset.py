@@ -1,4 +1,4 @@
-from . import BaseDataset, constants, threshold
+from . import BaseDataset, constants
 
 from abc import abstractmethod
 
@@ -249,7 +249,7 @@ class PitchDataset(BaseDataset):
         Parameters
         ----------
         activations : ndarray (F x T)
-          Discrete activations corresponding to midi_freqs
+          Binarized activations corresponding to midi_freqs
         midi_freqs : ndarray (F)
           MIDI frequency corresponding to each bin
         thr : float [0, 1]
@@ -264,8 +264,8 @@ class PitchDataset(BaseDataset):
         # Initialize empty pitch arrays for each frame
         multi_pitch = [np.empty(0)] * activations.shape[-1]
 
-        # Make sure the activations are binarized
-        activations = threshold(activations, thr)
+        # Make sure provided activations are binarized
+        assert np.alltrue(np.logical_or(activations == 0, activations == 1))
 
         # Determine which frames contain pitch activity
         non_silent_frames = np.where(np.sum(activations, axis=-2) > 0)[-1]

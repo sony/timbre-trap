@@ -3,8 +3,7 @@ import torch
 
 __all__ = [
     'compute_reconstruction_loss',
-    'compute_transcription_loss',
-    'compute_kl_divergence'
+    'compute_transcription_loss'
 ]
 
 
@@ -65,29 +64,3 @@ def compute_transcription_loss(estimate, target, weight_positive_class=False):
     transcription_loss = transcription_loss.sum(-2).mean()
 
     return transcription_loss
-
-
-def compute_kl_divergence(mean_src, logvar_src):
-    """
-    Compute KL-divergence w.r.t. standard normal distribution for a batch of latent vectors.
-
-    Parameters
-    ----------
-    mean_src : Tensor (B x D_lat x T)
-      Means of latent distributions
-    logvar_src : Tensor (B x D_lat x T)
-      Log of variances of latent distributions
-
-    Returns
-    ----------
-    kl_divergence : tensor (float)
-      Summed KL-divergence for the batch
-    """
-
-    # Compute KL-divergence between the parameterized distributions and standard normal
-    kl_divergence = -0.5 * (1 + logvar_src - mean_src.pow(2) - logvar_src.exp())
-
-    # Sum KL-divergence across latent feature and average across time / batch
-    kl_divergence = kl_divergence.sum(-2).mean()
-
-    return kl_divergence

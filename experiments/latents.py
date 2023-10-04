@@ -1,12 +1,13 @@
-from datasets.MixedMultiPitch import Bach10 as Bach10_Mixtures
-from datasets.SoloMultiPitch import Bach10 as Bach10_Stems
-from torch.utils.data import DataLoader
-from datasets import constants
+from timbre_trap.datasets.MixedMultiPitch import Bach10 as Bach10_Mixtures
+from timbre_trap.datasets.SoloMultiPitch import Bach10 as Bach10_Stems
+from timbre_trap.datasets import constants
 from utils import *
 
+from torch.utils.data import DataLoader
 from matplotlib import rcParams
 from tqdm import tqdm
 
+import shutil
 import torch
 import os
 
@@ -20,16 +21,8 @@ checkpoint = 8750
 # Choose the GPU on which to perform evaluation
 gpu_id = None
 
-# File layout of system (0 - desktop | 1 - server | 2 - Kinwai's)
-path_layout = 0
-
 # Construct the path to the top-level directory of the experiment
-if path_layout == 1:
-    experiment_dir = os.path.join('/', 'data2', 'frank', 'experiments', ex_name)
-elif path_layout == 2:
-    experiment_dir = os.path.join('..', 'experiments', ex_name)
-else:
-    experiment_dir = os.path.join('.', 'generated', 'experiments', ex_name)
+experiment_dir = os.path.join('..', 'generated', 'experiments', ex_name)
 
 # Random seed for evaluation
 seed = 0
@@ -62,15 +55,8 @@ model.eval()
 ## DATASETS ##
 ##############
 
-if path_layout == 1:
-    # Point to the datasets within the storage drive containing them
-    bch10_base_dir = os.path.join('/', 'data2', 'frank', 'Bach10')
-elif path_layout == 2:
-    # Point to the datasets within the root of the docker container
-    bch10_base_dir = os.path.join('..', 'Bach10')
-else:
-    # Use the default base directory paths
-    bch10_base_dir = None
+# Use the default base directory paths
+bch10_base_dir = None
 
 # Legend for labeling instrument within stems
 bach10_instrument_legend = ['Violin', 'Clarinet', 'Saxophone', 'Bassoon']
@@ -87,6 +73,12 @@ num_tracks, num_stems = 10, 4
 ###################
 ## VISUALIZATION ##
 ###################
+
+# Construct a path to the directory under which to save visualizations
+save_dir = os.path.join(experiment_dir, 'visualization')
+
+# Make sure the save directory exists
+os.makedirs(save_dir, exist_ok=True)
 
 # Seed everything with the same seed
 seed_everything(seed)
@@ -131,7 +123,7 @@ for i in tqdm(range(num_tracks)):
 all_latents = torch.cat(all_latents, dim=0)
 
 # Construct a path to save latent space visualization for checkpoint
-save_path = os.path.join(experiment_dir, f'latents-{checkpoint}.pdf')
+save_path = os.path.join(save_dir, f'latents-{checkpoint}.pdf')
 
 # Change the font and font size for the plot
 rcParams['font.size'] = 20

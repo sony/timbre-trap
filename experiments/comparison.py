@@ -1,11 +1,10 @@
-from datasets.MixedMultiPitch import Bach10 as Bach10_Mixtures, Su
-from datasets.SoloMultiPitch import GuitarSet
-from datasets.NoteDataset import NoteDataset
+from timbre_trap.datasets.MixedMultiPitch import Bach10 as Bach10_Mixtures, Su
+from timbre_trap.datasets.SoloMultiPitch import GuitarSet
+from timbre_trap.datasets.NoteDataset import NoteDataset
 
+from timbre_trap.models.utils import filter_non_peaks, threshold
+from timbre_trap.datasets.utils import constants
 from evaluate import MultipitchEvaluator
-
-from datasets.utils import constants, threshold
-from models.utils import filter_non_peaks
 from utils import *
 
 from tqdm import tqdm
@@ -29,16 +28,8 @@ gpu_id = None
 # Flag to print results for each track separately
 verbose = True
 
-# File layout of system (0 - desktop | 1 - server | 2 - Kinwai's)
-path_layout = 0
-
 # Construct the path to the top-level directory of the experiment
-if path_layout == 1:
-    experiment_dir = os.path.join('/', 'data2', 'frank', 'experiments', ex_name)
-elif path_layout == 2:
-    experiment_dir = os.path.join('..', 'experiments', ex_name)
-else:
-    experiment_dir = os.path.join('.', 'generated', 'experiments', ex_name)
+experiment_dir = os.path.join('..', 'generated', 'experiments', ex_name)
 
 
 ########################
@@ -77,11 +68,12 @@ basic_pitch = tf.saved_model.load(str(ICASSP_2022_MODEL_PATH))
 bp_midi_freqs = librosa.note_to_midi('A0') + np.arange(264) / (bp_bins_per_octave / 12)
 
 
-if 'predict_on_audio.py' in os.listdir(os.path.curdir):
-    from predict_on_audio import compute_hcqt, compute_output
-
+if 'deepsalience.py' in os.listdir(os.path.curdir):
+    from deepsalience import compute_hcqt, compute_output
+    # Set flag for evaluating DeepSalience
     deepsalience_available = True
 else:
+    # Set flag to skip DeepSalience
     deepsalience_available = False
 
 
@@ -89,21 +81,10 @@ else:
 ## DATASETS ##
 ##############
 
-if path_layout == 1:
-    # Point to the datasets within the storage drive containing them
-    bch10_base_dir = os.path.join('/', 'data2', 'frank', 'Bach10')
-    su_base_dir = os.path.join('/', 'data2', 'frank', 'Su')
-    gset_base_dir = os.path.join('/', 'data2', 'frank', 'GuitarSet')
-elif path_layout == 2:
-    # Point to the datasets within the root of the docker container
-    bch10_base_dir = os.path.join('..', 'Bach10')
-    su_base_dir = os.path.join('..', 'Su')
-    gset_base_dir = os.path.join('..', 'GuitarSet')
-else:
-    # Use the default base directory paths
-    bch10_base_dir = None
-    su_base_dir = None
-    gset_base_dir = None
+# Use the default base directory paths
+bch10_base_dir = None
+su_base_dir = None
+gset_base_dir = None
 
 # Instantiate Bach10 dataset mixtures for evaluation
 bch10_test = Bach10_Mixtures(base_dir=bch10_base_dir,

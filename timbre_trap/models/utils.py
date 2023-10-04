@@ -7,6 +7,7 @@ import torch
 __all__ = [
     'DataParallel',
     'filter_non_peaks',
+    'threshold',
     'debug_nans'
 ]
 
@@ -57,6 +58,31 @@ def filter_non_peaks(_arr):
 
     # Remove padded rows
     arr = arr[..., 1 : -1, :]
+
+    return arr
+
+
+def threshold(_arr, t=0.5):
+    """
+    Binarize data based on a given threshold.
+
+    Parameters
+    ----------
+    _arr : ndarray
+      Original data
+    t : float [0, 1]
+      Threshold value
+
+    Returns
+    ----------
+    arr : ndarray
+      Binarized data
+    """
+
+    # Initialize an array to hold binarized data
+    arr = np.zeros(_arr.shape)
+    # Set values above threshold to one
+    arr[_arr >= t] = 1
 
     return arr
 

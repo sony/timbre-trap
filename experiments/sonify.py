@@ -1,9 +1,9 @@
-from datasets.MixedMultiPitch import Bach10 as Bach10_Mixtures
-from datasets.SoloMultiPitch import Bach10 as Bach10_Stems
-from torch.utils.data import DataLoader
-from datasets import constants
+from timbre_trap.datasets.MixedMultiPitch import Bach10 as Bach10_Mixtures
+from timbre_trap.datasets.SoloMultiPitch import Bach10 as Bach10_Stems
+from timbre_trap.datasets import constants
 from utils import *
 
+from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 import soundfile as sf
@@ -21,16 +21,8 @@ checkpoint = 8750
 # Choose the GPU on which to perform sonification
 gpu_id = None
 
-# File layout of system (0 - desktop | 1 - server | 2 - Kinwai's)
-path_layout = 0
-
 # Construct the path to the top-level directory of the experiment
-if path_layout == 1:
-    experiment_dir = os.path.join('/', 'data2', 'frank', 'experiments', ex_name)
-elif path_layout == 2:
-    experiment_dir = os.path.join('..', 'experiments', ex_name)
-else:
-    experiment_dir = os.path.join('.', 'generated', 'experiments', ex_name)
+experiment_dir = os.path.join('..', 'generated', 'experiments', ex_name)
 
 
 ########################
@@ -60,15 +52,8 @@ model.eval()
 ## DATASETS ##
 ##############
 
-if path_layout == 1:
-    # Point to the datasets within the storage drive containing them
-    bch10_base_dir = os.path.join('/', 'data2', 'frank', 'Bach10')
-elif path_layout == 2:
-    # Point to the datasets within the root of the docker container
-    bch10_base_dir = os.path.join('..', 'Bach10')
-else:
-    # Use the default base directory paths
-    bch10_base_dir = None
+# Use the default base directory paths
+bch10_base_dir = None
 
 # Instantiate Bach10 dataset mixtures for sonfication
 bch10_mixes = Bach10_Mixtures(base_dir=bch10_base_dir,

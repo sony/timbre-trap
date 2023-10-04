@@ -1,12 +1,12 @@
-from datasets.SoloMultiPitch import URMP as URMP_Stems, Bach10 as Bach10_Stems, MedleyDB_Pitch, MAESTRO, GuitarSet
-from datasets.MixedMultiPitch import URMP as URMP_Mixtures, Bach10 as Bach10_Mixtures, Su, MusicNet, TRIOS
-from datasets.AudioStems import MedleyDB as MedleyDB_Stems
-from datasets.AudioMixtures import MedleyDB as MedleyDB_Mixtures, FMA
-from datasets import ComboDataset, constants
-from models import DataParallel, Transcriber
+from timbre_trap.datasets.MixedMultiPitch import URMP as URMP_Mixtures, Bach10 as Bach10_Mixtures, Su, MusicNet, TRIOS
+from timbre_trap.datasets.SoloMultiPitch import URMP as URMP_Stems, MedleyDB_Pitch, MAESTRO, GuitarSet
+from timbre_trap.datasets.AudioStems import MedleyDB as MedleyDB_Stems
+from timbre_trap.datasets.AudioMixtures import MedleyDB as MedleyDB_Mixtures, FMA
+from timbre_trap.datasets import ComboDataset, constants
+from timbre_trap.models import DataParallel, Transcriber
 
+from timbre_trap.models.objectives import *
 from evaluate import evaluate
-from models.objectives import *
 from utils import *
 
 from torch.utils.tensorboard import SummaryWriter
@@ -21,7 +21,6 @@ import math
 import os
 
 
-CONFIG = 3 # (0 - desktop | 1 - server | 2 - Kinwai's)
 EX_NAME = '_'.join(['Final_Base_V2'])
 
 ex = Experiment('Train a model to reconstruct and transcribe audio')
@@ -43,7 +42,7 @@ def config():
     checkpoint_interval = 250
 
     # Number of samples to gather for a batch
-    batch_size = 8 if CONFIG else 2
+    batch_size = 8
 
     # Number of seconds of audio per sample
     n_secs = 9
@@ -106,16 +105,9 @@ def config():
     ############
 
     # Number of threads to use for data loading
-    n_workers = 8 * len(gpu_ids) if CONFIG else 0
+    n_workers = 8 * len(gpu_ids)
 
-    if CONFIG == 1:
-        root_dir = os.path.join('/', 'data2', 'frank', 'experiments', EX_NAME)
-    elif CONFIG == 2:
-        root_dir = os.path.join('..', 'experiments', EX_NAME)
-    elif CONFIG == 3:
-        root_dir = os.path.join('/', 'data', 'frank', 'experiments', EX_NAME)
-    else:
-        root_dir = os.path.join('.', 'generated', 'experiments', EX_NAME)
+    root_dir = os.path.join('..', 'generated', 'experiments', EX_NAME)
 
     # Flag to make experimental setup more lightweight
     debug = False
@@ -143,54 +135,17 @@ def train_model(checkpoint_path, max_epochs, checkpoint_interval, batch_size, n_
     # Seed everything with the same seed
     seed_everything(seed)
 
-    if CONFIG == 1:
-        # Point to the datasets within the storage drive containing them
-        urmp_base_dir = os.path.join('/', 'data2', 'frank', 'URMP')
-        mydb_ptch_base_dir = os.path.join('/', 'data2', 'frank', 'MedleyDB-Pitch')
-        mydb_base_dir = os.path.join('/', 'data2', 'share', 'medley1', 'all')
-        mstro_base_dir = os.path.join('/', 'data2', 'frank', 'MAESTRO')
-        bch10_base_dir = os.path.join('/', 'data2', 'frank', 'Bach10')
-        su_base_dir = os.path.join('/', 'data2', 'frank', 'Su')
-        mnet_base_dir = os.path.join('/', 'data2', 'frank', 'MusicNet')
-        gset_base_dir = os.path.join('/', 'data2', 'frank', 'GuitarSet')
-        fma_base_dir = os.path.join('/', 'data2', 'frank', 'FMA')
-        trios_base_dir = os.path.join('/', 'data2', 'frank', 'TRIOS')
-    elif CONFIG == 2:
-        # Point to the datasets within the root of the docker container
-        urmp_base_dir = os.path.join('..', 'URMP')
-        mydb_ptch_base_dir = os.path.join('..', 'MedleyDB-Pitch')
-        mydb_base_dir = os.path.join('..', 'MedleyDB')
-        mstro_base_dir = os.path.join('..', 'MAESTRO')
-        bch10_base_dir = os.path.join('..', 'Bach10')
-        su_base_dir = os.path.join('..', 'Su')
-        mnet_base_dir = os.path.join('..', 'MusicNet')
-        gset_base_dir = os.path.join('..', 'GuitarSet')
-        fma_base_dir = os.path.join('..', 'FMA')
-        trios_base_dir = os.path.join('..', 'TRIOS')
-    elif CONFIG == 3:
-        # Point to the datasets within the storage drive containing them
-        urmp_base_dir = os.path.join('/', 'data', 'datasets', 'URMP')
-        mydb_ptch_base_dir = os.path.join('/', 'data', 'datasets', 'MedleyDB-Pitch')
-        mydb_base_dir = os.path.join('/', 'data', 'datasets', 'MedleyDB')
-        mstro_base_dir = os.path.join('/', 'data', 'datasets', 'MAESTRO')
-        bch10_base_dir = os.path.join('/', 'data', 'datasets', 'Bach10')
-        su_base_dir = os.path.join('/', 'data', 'datasets', 'Su')
-        mnet_base_dir = os.path.join('/', 'data', 'datasets', 'MusicNet')
-        gset_base_dir = os.path.join('/', 'data', 'datasets', 'GuitarSet')
-        fma_base_dir = os.path.join('/', 'data', 'datasets', 'FMA')
-        trios_base_dir = os.path.join('/', 'data', 'datasets', 'TRIOS')
-    else:
-        # Use the default base directory paths
-        urmp_base_dir = None
-        mydb_ptch_base_dir = None
-        mydb_base_dir = None
-        mstro_base_dir = None
-        bch10_base_dir = None
-        su_base_dir = None
-        mnet_base_dir = None
-        gset_base_dir = None
-        fma_base_dir = None
-        trios_base_dir = None
+    # Use the default base directory paths
+    urmp_base_dir = None
+    mydb_ptch_base_dir = None
+    mydb_base_dir = None
+    mstro_base_dir = None
+    bch10_base_dir = None
+    su_base_dir = None
+    mnet_base_dir = None
+    gset_base_dir = None
+    fma_base_dir = None
+    trios_base_dir = None
 
     # Initialize the primary PyTorch device
     device = torch.device(f'cuda:{gpu_ids[0]}'

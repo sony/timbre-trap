@@ -1,7 +1,6 @@
-from datasets import NoteDataset, constants
-from datasets.utils import threshold
-from models.utils import filter_non_peaks
-from models.objectives import *
+from timbre_trap.datasets import NoteDataset, constants
+from timbre_trap.models.utils import filter_non_peaks, threshold
+from timbre_trap.models.objectives import *
 from utils import *
 
 from torchmetrics.audio import SignalDistortionRatio
