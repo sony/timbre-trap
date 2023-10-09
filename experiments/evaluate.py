@@ -173,10 +173,11 @@ def evaluate(model, eval_set, multipliers, writer=None, i=0, device='cpu'):
             audio = model.sliCQ.pad_to_block_length(audio)
 
             # Perform transcription and reconstruction simultaneously
-            reconstruction, latents, transcription, _, _, losses = model(audio)
+            reconstruction, latents, transcription_coeffs, \
+            transcription_rec, transcription_scr, losses = model(audio, multipliers['consistency'])
 
             # Extract magnitude of decoded coefficients and convert to activations
-            transcription = torch.nn.functional.tanh(model.sliCQ.to_magnitude(transcription))
+            transcription = torch.nn.functional.tanh(model.sliCQ.to_magnitude(transcription_coeffs))
 
             # Determine the times associated with predictions
             times_est = model.sliCQ.get_times(model.sliCQ.get_expected_frames(audio.size(-1)))
@@ -209,7 +210,7 @@ def evaluate(model, eval_set, multipliers, writer=None, i=0, device='cpu'):
             # Obtain spectral coefficients of audio
             coefficients = model.sliCQ(audio)
 
-            # Compute the reconstruction loss for the batch
+            # Compute the reconstruction loss for the track
             reconstruction_loss = compute_reconstruction_loss(reconstruction, coefficients)
 
             # Determine padding amount in terms of frames
@@ -218,12 +219,22 @@ def evaluate(model, eval_set, multipliers, writer=None, i=0, device='cpu'):
             # Pad the transcription targets to match prediction size
             targets = torch.nn.functional.pad(targets, (0, n_pad_frames))
 
-            # Compute the transcription loss for the batch
+            # Compute the transcription loss for the track
             transcription_loss = compute_transcription_loss(transcription.squeeze(), targets.to(device), True)
 
             # Compute the total loss for the track
             total_loss = multipliers['reconstruction'] * reconstruction_loss + \
                          multipliers['transcription'] * transcription_loss
+
+            if multipliers['consistency']:
+                # Compute the total consistency loss for the track
+                consistency_loss = sum(compute_consistency_loss(transcription_rec,
+                                                                transcription_scr,
+                                                                transcription_coeffs))
+                # Store the consistency loss for the track
+                evaluator.append_results({'loss/consistency' : consistency_loss.item()})
+                # Add combined consistency loss to the total loss
+                total_loss += multipliers['consistency'] * consistency_loss
 
             for key_loss, val_loss in losses.items():
                 # Store the model loss for the track
