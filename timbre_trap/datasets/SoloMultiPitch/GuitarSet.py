@@ -2,7 +2,6 @@ from .. import MPEDataset
 from ..utils import *
 
 import numpy as np
-import warnings
 import jams
 import os
 
@@ -14,6 +13,23 @@ class GuitarSet(MPEDataset):
 
     SAMPLING_RATE = 44100
     HOP_LENGTH = 256
+
+    def __init__(self, **kwargs):
+        """
+        Override the resampling indices to prevent erroneous extension of pitches.
+        """
+
+        # Determine if resampling indices were provided
+        resample_idcs = kwargs.pop('resample_idcs', None)
+
+        if resample_idcs is None:
+            # Change the default resampling indices
+            resample_idcs = [0, 0]
+
+        # Update the value within the keyword arguments
+        kwargs.update({'resample_idcs' : resample_idcs})
+
+        super().__init__(**kwargs)
 
     @staticmethod
     def available_splits():
