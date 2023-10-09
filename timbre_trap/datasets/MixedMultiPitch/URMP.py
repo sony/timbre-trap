@@ -50,29 +50,30 @@ class URMP(MPEDataset, URMP):
 
         return wav_path
 
-    def get_ground_truth_path(self, track):
+    def get_ground_truth_path(self, track, instrument):
         """
-        Get the paths to a track's ground truth.
+        Get the path to a track's ground-truth for a specific instrument.
 
         Parameters
         ----------
         track : string
           URMP track name
+        instrument : string
+          Instrument within track
 
         Returns
         ----------
-        txt_paths : list of strings
-          Path to ground-truth (multiple) for the specified track
+        txt_path : string
+          Path to ground-truth for the specified track and instrument
         """
 
-        # Obtain a list of all files under the track's directory
-        track_files = os.listdir(os.path.join(self.base_dir, track))
+        # Determine name of mixture from track name
+        mixture_name = '_'.join(track.split('_')[:2])
 
-        # Get the path for the F0 annotations of each instrument in the mixture
-        txt_paths = [os.path.join(self.base_dir, track, f) for f in track_files
-                      if f.startswith('F0s')]
+        # Construct path to annotations using instrument and mixture to match naming scheme
+        txt_path = os.path.join(self.base_dir, track, f'F0s_{instrument}_{mixture_name}.txt')
 
-        return txt_paths
+        return txt_path
 
     def get_ground_truth(self, track):
         """
@@ -91,16 +92,19 @@ class URMP(MPEDataset, URMP):
           Frame-level multi-pitch annotations in Hertz
         """
 
-        # Obtain the paths to the track's ground_truth
-        txt_paths = self.get_ground_truth_path(track)
+        # Obtain instrument tags (with instrument number) from the full track name
+        instruments = [f'{i + 1}_{tag}' for i, tag in enumerate(track.split('_')[2:])]
 
         # Initialize ground-truth variables
         times, pitches = None, None
 
-        # Loop through annotations
-        for t in txt_paths:
-            # Read annotation file
-            with open(t) as txt_file:
+        # Loop through instruments
+        for instrument in instruments:
+            # Obtain the path to the ground_truth for the instrument
+            txt_path = self.get_ground_truth_path(track, instrument)
+
+            # Read pitch annotations
+            with open(txt_path) as txt_file:
                 # Read frame-level annotations into a list
                 annotations = [f.split() for f in txt_file.readlines()]
 
