@@ -158,9 +158,9 @@ class Transcriber(nn.Module):
 
         return activations
 
-    def forward(self, audio):
+    def reconstruct(self, audio):
         """
-        Perform both model functions efficiently (for training).
+        Obtain reconstructed coefficients for a batch of raw audio.
 
         Parameters
         ----------
@@ -171,10 +171,42 @@ class Transcriber(nn.Module):
         ----------
         reconstruction : Tensor (B x 2 x F X T)
           Batch of reconstructed spectral coefficients
+        """
+
+        # Encode raw audio into latent vectors
+        latents, embeddings, losses = self.encode(audio)
+
+        # Apply skip connections if they are turned on
+        embeddings = self.apply_skip_connections(embeddings)
+
+        # Decode latent vectors into spectral coefficients
+        reconstruction = self.decode(latents, embeddings)
+
+        return reconstruction
+
+    def forward(self, audio, consistency=False):
+        """
+        Perform all model functions efficiently (for training/evaluation).
+
+        Parameters
+        ----------
+        audio : Tensor (B x 1 x T)
+          Batch of input raw audio
+        consistency : bool
+          Whether to perform computations for consistency loss
+
+        Returns
+        ----------
+        reconstruction : Tensor (B x 2 x F X T)
+          Batch of reconstructed spectral coefficients
         latents : Tensor (B x D_lat x T)
           Batch of latent codes
         transcription : Tensor (B x 2 x F X T)
           Batch of transcription spectral coefficients
+        transcription_rec : Tensor (B x 2 x F X T)
+          Batch of reconstructed spectral coefficients for transcription coefficients input
+        transcription_scr : Tensor (B x 2 x F X T)
+          Batch of transcription spectral coefficients for transcription coefficients input
         losses : dict containing
           ...
         """
@@ -191,7 +223,23 @@ class Transcriber(nn.Module):
         # Estimate pitch using transcription switch
         transcription = self.decode(latents, embeddings, True)
 
-        return reconstruction, latents, transcription, losses
+        if consistency:
+            # Encode transcription coefficients for samples with ground-truth
+            latents_trn, embeddings_trn, _ = self.encoder(transcription)
+
+            # Apply skip connections if they are turned on
+            embeddings_trn = self.apply_skip_connections(embeddings_trn)
+
+            # Attempt to reconstruct transcription spectral coefficients
+            transcription_rec = self.decode(latents_trn, embeddings_trn)
+
+            # Attempt to transcribe audio pertaining to transcription coefficients
+            transcription_scr = self.decode(latents_trn, embeddings_trn, True)
+        else:
+            # Return null for both sets of coefficients
+            transcription_rec, transcription_scr = None, None
+
+        return reconstruction, latents, transcription, transcription_rec, transcription_scr, losses
 
 
 class Encoder(nn.Module):

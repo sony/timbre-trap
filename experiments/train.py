@@ -434,10 +434,11 @@ def train_model(checkpoint_path, max_epochs, checkpoint_interval, batch_size, n_
 
             with torch.autocast(device_type=f'cuda'):
                 # Perform transcription and reconstruction simultaneously
-                reconstruction, latents, transcription_, losses = model(audio)
+                reconstruction, latents, transcription_coeffs, \
+                transcription_rec, transcription_scr, losses = model(audio, multipliers['consistency'])
 
                 # Extract magnitude of decoded coefficients and convert to activations
-                transcription = torch.nn.functional.tanh(model.sliCQ.to_magnitude(transcription_))
+                transcription = torch.nn.functional.tanh(model.sliCQ.to_magnitude(transcription_coeffs))
 
                 # Compute the reconstruction loss for the batch
                 reconstruction_loss = compute_reconstruction_loss(reconstruction, coefficients)
@@ -457,37 +458,21 @@ def train_model(checkpoint_path, max_epochs, checkpoint_interval, batch_size, n_
                     total_loss += multipliers['transcription'] * transcription_loss
 
                     if multipliers['consistency']:
-                        # Discard transcription spectral coefficients with no ground-truth
-                        transcription_ = transcription_[:mpe_batch_size]
+                        # Compute the consistency losses for the portion of the batch with ground-truth
+                        consistency_loss_sp, consistency_loss_sc = compute_consistency_loss(transcription_rec[:mpe_batch_size],
+                                                                                            transcription_scr[:mpe_batch_size],
+                                                                                            transcription_coeffs[:mpe_batch_size])
 
-                        # Encode transcription coefficients for samples with ground-truth
-                        t_latents, t_embeddings, _ = model.encoder(transcription_)
+                        # Log the (spectral-) consistency loss for this batch
+                        writer.add_scalar('train/loss/consistency/spectral', consistency_loss_sp.item(), batch_count)
 
-                        # Apply skip connections if they are turned on
-                        t_embeddings = model.apply_skip_connections(t_embeddings)
-
-                        # Attempt to reconstruct transcription spectral coefficients
-                        t_reconstruction = model.decode(t_latents, t_embeddings)
-
-                        # Compute the reconstruction loss for the cycle
-                        t_reconstruction_loss = compute_reconstruction_loss(t_reconstruction, transcription_)
-
-                        # Log the (reconstruction) consistency loss for this batch
-                        writer.add_scalar('train/loss/consistency_r', t_reconstruction_loss.item(), batch_count)
-
-                        # Estimate transcription of transcription coefficients
-                        t_transcription = model.decode(t_latents, t_embeddings, True)
-
-                        # Compute the reconstruction loss on the transcription coefficients
-                        t_transcription_loss = compute_reconstruction_loss(t_transcription, transcription_)
-
-                        # Log the (transcription) consistency loss for this batch
-                        writer.add_scalar('train/loss/consistency_t', t_transcription_loss.item(), batch_count)
+                        # Log the (transcription-) consistency loss for this batch
+                        writer.add_scalar('train/loss/consistency/score', consistency_loss_sc.item(), batch_count)
 
                         # Compute the consistency loss for the batch
-                        consistency_loss = t_reconstruction_loss + t_transcription_loss
+                        consistency_loss = consistency_loss_sp + consistency_loss_sc
 
-                        # Add consistency loss to the total loss
+                        # Add combined consistency loss to the total loss
                         total_loss += multipliers['consistency'] * consistency_loss
 
                 for key_loss, val_loss in losses.items():

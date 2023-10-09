@@ -3,7 +3,8 @@ import torch
 
 __all__ = [
     'compute_reconstruction_loss',
-    'compute_transcription_loss'
+    'compute_transcription_loss',
+    'compute_consistency_loss'
 ]
 
 
@@ -64,3 +65,33 @@ def compute_transcription_loss(estimate, target, weight_positive_class=False):
     transcription_loss = transcription_loss.sum(-2).mean()
 
     return transcription_loss
+
+
+def compute_consistency_loss(spectral_coefficients, transcription_coefficients, target):
+    """
+    Compute consistency loss components (spectral | transcription) for a batch.
+
+    Parameters
+    ----------
+    spectral_coefficients : Tensor (B x 2 x F X T)
+      Batch of reconstruction spectral coefficients
+    transcription_coefficients : Tensor (B x 2 x F X T)
+      Batch of transcription spectral coefficients
+    target : Tensor (B x 2 x F X T)
+      Batch of target spectral coefficients
+
+    Returns
+    ----------
+    consistency_spectral_loss : tensor (float)
+      Total spectral-consistency loss for the batch
+    consistency_score_loss : tensor (float)
+      Total transcription-consistency loss for the batch
+    """
+
+    # Compute reconstruction loss between spectral coefficients and target coefficients
+    consistency_spectral_loss = compute_reconstruction_loss(spectral_coefficients, target)
+
+    # Compute reconstruction loss between transcription coefficients and target coefficients
+    consistency_score_loss = compute_reconstruction_loss(transcription_coefficients, target)
+
+    return consistency_spectral_loss, consistency_score_loss

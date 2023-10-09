@@ -173,7 +173,7 @@ def evaluate(model, eval_set, multipliers, writer=None, i=0, device='cpu'):
             audio = model.sliCQ.pad_to_block_length(audio)
 
             # Perform transcription and reconstruction simultaneously
-            reconstruction, latents, transcription, losses = model(audio)
+            reconstruction, latents, transcription, _, _, losses = model(audio)
 
             # Extract magnitude of decoded coefficients and convert to activations
             transcription = torch.nn.functional.tanh(model.sliCQ.to_magnitude(transcription))
