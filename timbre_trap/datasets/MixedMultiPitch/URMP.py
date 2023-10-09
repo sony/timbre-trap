@@ -58,8 +58,8 @@ class URMP(MPEDataset, URMP):
         ----------
         track : string
           URMP track name
-        instrument : string
-          Instrument within track
+        instrument : int
+          Instrument index within track
 
         Returns
         ----------
@@ -67,11 +67,14 @@ class URMP(MPEDataset, URMP):
           Path to ground-truth for the specified track and instrument
         """
 
-        # Determine name of mixture from track name
-        mixture_name = '_'.join(track.split('_')[:2])
+        # Construct a path to the track directory
+        track_dir = os.path.join(self.base_dir, track)
 
-        # Construct path to annotations using instrument and mixture to match naming scheme
-        txt_path = os.path.join(self.base_dir, track, f'F0s_{instrument}_{mixture_name}.txt')
+        # Identify the annotations file corresponding to the specified instrument index
+        anno_file = [f for f in os.listdir(track_dir) if f.startswith(f'F0s_{instrument}')][0]
+
+        # Construct a path to annotations for the instrument
+        txt_path = os.path.join(track_dir, anno_file)
 
         return txt_path
 
@@ -92,8 +95,8 @@ class URMP(MPEDataset, URMP):
           Frame-level multi-pitch annotations in Hertz
         """
 
-        # Obtain instrument tags (with instrument number) from the full track name
-        instruments = [f'{i + 1}_{tag}' for i, tag in enumerate(track.split('_')[2:])]
+        # Obtain indices for instruments within mixture
+        instruments = [(i + 1) for i in range(len(track.split('_')[2:]))]
 
         # Initialize ground-truth variables
         times, pitches = None, None
