@@ -47,7 +47,7 @@ def config():
     # Number of seconds of audio per sample
     n_secs = 9
 
-    # Fixed learning rate
+    # Initial learning rate
     learning_rate = 1e-3
 
     # Scaling factors for each loss term
@@ -67,7 +67,7 @@ def config():
     validation_criteria_metric = 'mpe/f1-score'
 
     # Select whether the validation criteria should be maximized or minimized
-    validation_criteria_maximize = True
+    validation_criteria_maximize = True # (False - minimize | True - maximize)
 
     # Late starting point (0 to disable)
     n_epochs_late_start = 0
@@ -107,7 +107,11 @@ def config():
     # Number of threads to use for data loading
     n_workers = 8 * len(gpu_ids)
 
+    # Top-level directory under which to save all experiment files
     root_dir = os.path.join('..', 'generated', 'experiments', EX_NAME)
+
+    # Create the root directory
+    os.makedirs(root_dir, exist_ok=True)
 
     # Flag to make experimental setup more lightweight
     debug = False
@@ -115,9 +119,6 @@ def config():
     if debug:
         # Print a warning message indicating debug mode is active
         warnings.warn('Running in DEBUG mode...', RuntimeWarning)
-
-    # Create the root directory for the experiment files
-    os.makedirs(root_dir, exist_ok=True)
 
     # Add a file storage observer for the log directory
     ex.observers.append(FileStorageObserver(root_dir))
@@ -196,7 +197,7 @@ def train_model(checkpoint_path, max_epochs, checkpoint_interval, batch_size, n_
     else:
         # Instantiate URMP dataset stems for training
         urmp_stems_train = URMP_Stems(base_dir=urmp_base_dir,
-                                      splits=None,
+                                      splits=urmp_train_splits,
                                       sample_rate=sample_rate,
                                       cqt=model.sliCQ,
                                       n_secs=n_secs,
@@ -375,7 +376,7 @@ def train_model(checkpoint_path, max_epochs, checkpoint_interval, batch_size, n_
     # Warmup global learning rate over a fixed number of steps according to a cosine function
     warmup_scheduler = CosineWarmup(optimizer, n_steps=n_epochs_warmup * epoch_steps)
 
-    # Decay global learning rate by a factor of 1/2 after validation loss has plateaued
+    # Decay global learning rate by a factor of 1/2 after validation performance has plateaued
     decay_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,
                                                                  mode='max' if validation_criteria_maximize else 'min',
                                                                  factor=0.5,

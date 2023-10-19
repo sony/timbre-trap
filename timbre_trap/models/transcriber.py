@@ -244,7 +244,7 @@ class Transcriber(nn.Module):
 
 class Encoder(nn.Module):
     """
-    Implements a variational 2D convolutional encoder.
+    Implements a 2D convolutional encoder.
     """
 
     def __init__(self, feature_size, latent_size=None, model_complexity=1):

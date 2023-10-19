@@ -152,7 +152,7 @@ def evaluate(model, eval_set, multipliers, writer=None, i=0, device='cpu'):
             # Determine which track is being processed
             track = data[constants.KEY_TRACK]
             # Extract audio and add to the appropriate device
-            audio = data[constants.KEY_AUDIO].to(device).unsqueeze(1)
+            audio = data[constants.KEY_AUDIO].to(device).unsqueeze(0)
             # Extract ground-truth targets as a Tensor
             targets = torch.Tensor(data[constants.KEY_GROUND_TRUTH])
 
@@ -261,13 +261,13 @@ def evaluate(model, eval_set, multipliers, writer=None, i=0, device='cpu'):
             # Extract magnitude from reconstructed spectral coefficients and convert to decibels
             reconstruction = model.sliCQ.to_decibels(model.sliCQ.to_magnitude(reconstruction))
 
-            # Add channel dimension to activations
+            # Add channel dimension to input/outputs
             features_log = features_log.unsqueeze(-3)
             reconstruction = reconstruction.unsqueeze(-3)
             transcription = transcription.unsqueeze(-3)
             targets = targets.unsqueeze(-3)
 
-            # Remove the batch dimension of input and outputs
+            # Remove the batch dimension of input/outputs
             features_log = features_log.squeeze(0)
             reconstruction = reconstruction.squeeze(0)
             transcription = transcription.squeeze(0)

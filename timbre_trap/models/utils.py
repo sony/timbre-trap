@@ -42,7 +42,7 @@ def filter_non_peaks(_arr):
     """
 
     # Create an extra row to all for edge peaks
-    extra_row = np.zeros(tuple([1] * len(_arr.shape[:-1])) + (_arr.shape[-1],))
+    extra_row = np.zeros(tuple(_arr.shape[:-2]) + (1, _arr.shape[-1]))
 
     # Pad the given array with extra rows
     padded_arr = np.concatenate((extra_row, _arr, extra_row), axis=-2)

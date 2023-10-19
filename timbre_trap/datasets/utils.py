@@ -1,7 +1,6 @@
 from torch.utils.data import default_collate
 from tqdm import tqdm
 
-import numpy as np
 import requests
 import tarfile
 import zipfile
@@ -119,7 +118,7 @@ def change_base_dir(new_dir, old_dir):
 
 def separate_ground_truth(batch):
     """
-    Extract the data for a sampled track.
+    Collate a batch into various groups based on data availability.
 
     Parameters
     ----------
