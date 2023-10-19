@@ -9,4 +9,4 @@
 *.egg
 *.egg-info
 
-ismir2017-deepsalience
+*deep_salience
