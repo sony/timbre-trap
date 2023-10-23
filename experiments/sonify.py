@@ -84,7 +84,7 @@ for i, data in enumerate(tqdm(bch10_mixes)):
     # Determine which mix is being processed
     track = data[constants.KEY_TRACK]
     # Extract mixture audio and add to the appropriate device
-    audio = data[constants.KEY_AUDIO].to(device).unsqueeze(1)
+    audio = data[constants.KEY_AUDIO].to(device).unsqueeze(0)
 
     with torch.no_grad():
         # Pad audio to next multiple of block length

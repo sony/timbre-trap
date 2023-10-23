@@ -1,10 +1,9 @@
 from timbre_trap.datasets.MixedMultiPitch import Bach10 as Bach10_Mixtures, Su
 from timbre_trap.datasets.SoloMultiPitch import GuitarSet
 from timbre_trap.datasets.NoteDataset import NoteDataset
-from timbre_trap.datasets import stream_url_resource
 
+from timbre_trap.datasets.utils import stream_url_resource, constants
 from timbre_trap.models.utils import filter_non_peaks, threshold
-from timbre_trap.datasets.utils import constants
 from evaluate import MultipitchEvaluator
 from utils import *
 
@@ -67,6 +66,7 @@ bp_bins_per_octave = 36
 basic_pitch = tf.saved_model.load(str(ICASSP_2022_MODEL_PATH))
 # Determine the MIDI frequency associated with each bin of Basic Pitch predictions
 bp_midi_freqs = librosa.note_to_midi('A0') + np.arange(264) / (bp_bins_per_octave / 12)
+
 
 # Specify the names of the files to download from GitHub
 script_name, weights_name = 'predict_on_audio.py', 'multif0.h5'

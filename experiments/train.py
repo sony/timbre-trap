@@ -507,6 +507,16 @@ def train_model(checkpoint_path, max_epochs, checkpoint_interval, batch_size, n_
                 optimizer.step()
 
             if batch_count % checkpoint_interval == 0:
+                # Construct a path to save the model checkpoint
+                model_path = os.path.join(log_dir, f'model-{batch_count}.pt')
+
+                if isinstance(model, torch.nn.DataParallel):
+                    # Unwrap and save the model
+                    torch.save(model.module, model_path)
+                else:
+                    # Save the model as is
+                    torch.save(model, model_path)
+
                 # Initialize dictionary to hold all validation results
                 validation_results = dict()
 
@@ -522,16 +532,6 @@ def train_model(checkpoint_path, max_epochs, checkpoint_interval, batch_size, n_
                 # Make sure model is on correct device and switch to training mode
                 model = model.to(device)
                 model.train()
-
-                # Construct a path to save the model checkpoint
-                model_path = os.path.join(log_dir, f'model-{batch_count}.pt')
-
-                if isinstance(model, torch.nn.DataParallel):
-                    # Unwrap and save the model
-                    torch.save(model.module, model_path)
-                else:
-                    # Save the model as is
-                    torch.save(model, model_path)
 
                 if decay_scheduler.patience and not warmup_scheduler.is_active() and i >= n_epochs_late_start:
                     # Step the learning rate decay scheduler by logging the validation metric for the checkpoint
