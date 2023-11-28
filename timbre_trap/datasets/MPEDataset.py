@@ -84,7 +84,7 @@ class MPEDataset(AudioDataset, PitchDataset):
         # Obtain ground-truth resampled to computed times
         multi_pitch = self.resample_multi_pitch(_times, _pitches, times)
         # Convert pitch annotations to multi pitch activations
-        ground_truth = self.multi_pitch_to_activations(multi_pitch, self.cqt.midi_freqs)
+        ground_truth = self.multi_pitch_to_activations(multi_pitch, self.cqt.get_midi_freqs())
 
         if self.n_secs is not None and len(times) != n_frames:
             # Determine number of frames made entirely of padding

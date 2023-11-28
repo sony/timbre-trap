@@ -279,3 +279,18 @@ class CQT(_CQT):
         times = np.arange(n_frames) * self.hop_length / self.sample_rate
 
         return times
+
+    def get_midi_freqs(self):
+        """
+        Obtain the MIDI frequencies associated with each bin.
+
+        Returns
+        ----------
+        midi_freqs : ndarray (F)
+          Center frequency of each bin
+        """
+
+        # Access pre-existing field
+        midi_freqs = self.midi_freqs
+
+        return midi_freqs

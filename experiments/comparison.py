@@ -179,7 +179,7 @@ for eval_set in [bch10_test, su_test, gset_test]:
     print_and_log(f'Results for {eval_set.name()}:', save_path)
 
     # Frequencies associated with ground-truth
-    gt_midi_freqs = eval_set.cqt.midi_freqs
+    gt_midi_freqs = eval_set.cqt.get_midi_freqs()
 
     # Determine valid frequency bins for multi-pitch estimation (based on mir_eval)
     valid_freqs = librosa.midi_to_hz(gt_midi_freqs) > mir_eval.multipitch.MAX_FREQ

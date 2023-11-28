@@ -89,7 +89,7 @@ class AMTDataset(AudioDataset, NoteDataset):
         multi_pitch = self.notes_to_multi_pitch(pitches, intervals, times)
 
         # Convert pitch list observations to multi pitch activations
-        ground_truth = self.multi_pitch_to_activations(multi_pitch, self.cqt.midi_freqs)
+        ground_truth = self.multi_pitch_to_activations(multi_pitch, self.cqt.get_midi_freqs())
 
         if self.n_secs is not None and len(times) != n_frames:
             # Determine number of frames made entirely of padding
