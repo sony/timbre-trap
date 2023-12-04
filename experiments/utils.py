@@ -14,7 +14,6 @@ __all__ = [
     'initialize_figure',
     'plot_magnitude',
     'plot_latents',
-    'track_gradient_norms',
     'CosineWarmup',
 ]
 
@@ -246,45 +245,6 @@ def plot_latents(latents, labels, seed=0, fig=None, save_path=None):
         fig.savefig(save_path, bbox_inches='tight', pad_inches=0)
 
     return fig
-
-
-def track_gradient_norms(module, writer=None, i=0, prefix='gradients'):
-    """
-    Compute the cumulative gradient norm of a network across all layers.
-
-    Parameters
-    ----------
-    module : torch.nn.Module
-      Network containing gradients to track
-    writer : SummaryWriter
-      Results logger for tensorboard
-    i : int
-      Current iteration for logging
-    prefix : str
-      Tag prefix for logging
-
-    Returns
-    ----------
-    cumulative_norm : float
-      Summed norms across all layers
-    """
-
-    # Initialize the cumulative norm
-    cumulative_norm = 0.
-
-    for layer, values in module.named_parameters():
-        if values.grad is not None:
-            # Compute the L2 norm of the gradients
-            grad_norm = values.grad.norm(2).item()
-
-            if writer is not None:
-                # Log the norm of the gradients for this layer
-                writer.add_scalar(f'{prefix}/{layer}', grad_norm, i)
-
-            # Accumulate the norm of the gradients
-            cumulative_norm += grad_norm
-
-    return cumulative_norm
 
 
 class CosineWarmup(torch.optim.lr_scheduler.LRScheduler):
