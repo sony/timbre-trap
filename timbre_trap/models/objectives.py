@@ -55,7 +55,7 @@ def compute_transcription_loss(estimate, target, weight_positive_class=False):
     # Compute mean squared error between the estimated and ground-truth transcription
     transcription_loss = torch.nn.functional.mse_loss(estimate, target, reduction='none')
 
-    if weight_positive_class:
+    if weight_positive_class and target.any():
         # Determine the inverse ratio between positive and negative activations
         positive_weight = torch.sum(1 - target).item() / torch.sum(target).item()
         # Scale transcription loss for positive targets

@@ -308,7 +308,8 @@ class StemMixingDataset(ComboDataset):
         data_both, data_audio, _ = separate_ground_truth(stems)
 
         # Initialize a dictionary for mixture
-        data = {constants.KEY_AUDIO : None}
+        data = {constants.KEY_TRACK : str(index),
+                constants.KEY_AUDIO : None}
 
         if data_audio is not None:
             # Sum stem audio together to obtain a mix
@@ -327,5 +328,12 @@ class StemMixingDataset(ComboDataset):
 
             # Combine all multi-pitch annotations into a single representation
             data[constants.KEY_GROUND_TRUTH] = torch.sum(data_both[constants.KEY_GROUND_TRUTH], dim=0).clamp(0, 1)
+
+            # Add placeholder frame times to mixture data
+            data[constants.KEY_TIMES] = data_both[constants.KEY_TIMES][0]
+
+            # Convert data to NumPy arrays for consistency
+            data[constants.KEY_TIMES] = np.array(data[constants.KEY_TIMES])
+            data[constants.KEY_GROUND_TRUTH] = np.array(data[constants.KEY_GROUND_TRUTH])
 
         return data
