@@ -1,8 +1,8 @@
-from timbre_trap.datasets.MixedMultiPitch import URMP as URMP_Mixtures, Bach10 as Bach10_Mixtures, Su, MusicNet, TRIOS
-from timbre_trap.datasets.SoloMultiPitch import URMP as URMP_Stems, MedleyDB_Pitch, MAESTRO, GuitarSet
+from timbre_trap.datasets.MixedMultiPitch import URMP as URMP_Mixtures, Bach10 as Bach10_Mixtures, Su, MusicNet as MusicNet_Mixtures, TRIOS
+from timbre_trap.datasets.SoloMultiPitch import URMP as URMP_Stems, MusicNet as MusicNet_Stems, MedleyDB_Pitch, MAESTRO, GuitarSet
 from timbre_trap.datasets.AudioStems import MedleyDB as MedleyDB_Stems
 from timbre_trap.datasets.AudioMixtures import MedleyDB as MedleyDB_Mixtures, FMA
-from timbre_trap.datasets import ComboDataset, constants
+from timbre_trap.datasets import ComboDataset, constants, StemMixingDataset
 from timbre_trap.models import DataParallel, Transcriber
 
 from timbre_trap.models.objectives import *
@@ -22,7 +22,7 @@ import math
 import os
 
 
-EX_NAME = '_'.join(['Final_Base_V2'])
+EX_NAME = '_'.join(['Final_Base_V2_Demo'])
 
 ex = Experiment('Train a model to reconstruct and transcribe audio')
 
@@ -37,13 +37,13 @@ def config():
     checkpoint_path = None
 
     # Maximum number of training iterations to conduct
-    max_epochs = 5000
+    max_epochs = 10000
 
     # Number of iterations between checkpoints
     checkpoint_interval = 250
 
     # Number of samples to gather for a batch
-    batch_size = 8
+    batch_size = 4
 
     # Number of seconds of audio per sample
     n_secs = 9
@@ -59,7 +59,7 @@ def config():
     }
 
     # Number of epochs spanning warmup phase (0 to disable)
-    n_epochs_warmup = 50
+    n_epochs_warmup = 5
 
     # Set validation dataset to compare for learning rate decay and early stopping
     validation_criteria_set = URMP_Mixtures.name()
@@ -83,7 +83,7 @@ def config():
     n_epochs_early_stop = None
 
     # IDs of the GPUs to use, if available
-    gpu_ids = [0]
+    gpu_ids = [1, 0]
 
     # Random seed for this experiment
     seed = 2
@@ -203,7 +203,7 @@ def train_model(checkpoint_path, max_epochs, checkpoint_interval, batch_size, n_
                                       cqt=model.sliCQ,
                                       n_secs=n_secs,
                                       seed=seed)
-        #mpe_train.append(urmp_stems_train)
+        mpe_train.append(urmp_stems_train)
 
         # Instantiate URMP dataset mixtures for training
         urmp_mixes_train = URMP_Mixtures(base_dir=urmp_base_dir,
@@ -230,7 +230,7 @@ def train_model(checkpoint_path, max_epochs, checkpoint_interval, batch_size, n_
                                          cqt=model.sliCQ,
                                          n_secs=n_secs,
                                          seed=seed)
-        #mpe_train.append(mydb_ptch_train)
+        mpe_train.append(mydb_ptch_train)
 
         # Instantiate MedleyDB (audio-only) stems for training
         mydb_stems_train = MedleyDB_Stems(base_dir=mydb_base_dir,
@@ -255,15 +255,24 @@ def train_model(checkpoint_path, max_epochs, checkpoint_interval, batch_size, n_
                                cqt=model.sliCQ,
                                n_secs=n_secs,
                                seed=seed)
-        #mpe_train.append(gset_train)
+        mpe_train.append(gset_train)
 
         # Instantiate MusicNet dataset for training
-        mnet_mixes_train = MusicNet(base_dir=mnet_base_dir,
-                                    splits=['train'],
-                                    sample_rate=sample_rate,
-                                    cqt=model.sliCQ,
-                                    n_secs=n_secs,
-                                    seed=seed)
+        mnet_stems_train = MusicNet_Stems(base_dir=mnet_base_dir,
+                                          splits=['train'],
+                                          sample_rate=sample_rate,
+                                          cqt=model.sliCQ,
+                                          n_secs=n_secs,
+                                          seed=seed)
+        #mpe_train.append(mnet_stems_train)
+
+        # Instantiate MusicNet dataset for training
+        mnet_mixes_train = MusicNet_Mixtures(base_dir=mnet_base_dir,
+                                             splits=['train'],
+                                             sample_rate=sample_rate,
+                                             cqt=model.sliCQ,
+                                             n_secs=n_secs,
+                                             seed=seed)
         #mpe_train.append(mnet_mixes_train)
 
         # Instantiate FMA dataset (audio-only) for training
@@ -273,6 +282,32 @@ def train_model(checkpoint_path, max_epochs, checkpoint_interval, batch_size, n_
                         n_secs=n_secs,
                         seed=seed)
         #audio_train.append(fma_train)
+
+        # MPE datasets with combinable stems
+        mpe_stem_sets = [urmp_stems_train,
+                         mydb_ptch_train,
+                         gset_train,
+                         mnet_stems_train,
+                         mstro_train]
+
+        # Instantiate random mixtures from MPE stems for training
+        rand_mpe_train = StemMixingDataset(mpe_stem_sets,
+                                           sum([len(d) // 2 for d in mpe_stem_sets]),
+                                           n_min=2,
+                                           n_max=3,
+                                           seed=seed)
+        #mpe_train.append(rand_mpe_train)
+
+        # Audio-only datasets with combinable stems
+        audio_stem_sets = [mydb_stems_train]
+
+        # Instantiate random mixtures from audio-only stems for training
+        rand_audio_train = StemMixingDataset(audio_stem_sets,
+                                             sum([len(d) // 2 for d in audio_stem_sets]),
+                                             n_min=2,
+                                             n_max=5,
+                                             seed=seed)
+        #audio_train.append(rand_audio_train)
 
     # Combine MPE and audio datasets
     mpe_train = ComboDataset(mpe_train)
@@ -352,10 +387,10 @@ def train_model(checkpoint_path, max_epochs, checkpoint_interval, batch_size, n_
                  seed=seed)
 
     # Add all validation datasets to a list
-    validation_sets = [urmp_mixes_val, bch10_test, su_test, gset_test]
+    validation_sets = [urmp_mixes_val, trios_val, bch10_test, su_test, gset_test]
 
     # Add all evaluation datasets to a list
-    evaluation_sets = [urmp_mixes_val, bch10_test, su_test, gset_test]
+    evaluation_sets = [urmp_mixes_val, trios_val, bch10_test, su_test, gset_test]
 
     # Initialize an optimizer for the model parameters
     optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
