@@ -11,6 +11,22 @@ class AudioDataset(BaseDataset):
     Implements functionality for a dataset with audio.
     """
 
+    def __init__(self, sample_rate=16000, **kwargs):
+        """
+        Instantiate the dataset wrapper.
+
+        Parameters
+        ----------
+        See BaseDataset for others...
+
+        sample_rate : int
+          Desired sample rate for the audio
+        """
+
+        BaseDataset.__init__(self, **kwargs)
+
+        self.sample_rate = sample_rate
+
     @abstractmethod
     def get_audio_path(self, track):
         """

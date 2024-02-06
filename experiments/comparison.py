@@ -70,10 +70,8 @@ bp_midi_freqs = librosa.note_to_midi('A0') + np.arange(264) / (bp_bins_per_octav
 
 # Specify the names of the files to download from GitHub
 script_name, weights_name = 'predict_on_audio.py', 'multif0.h5'
-# Obtain the path to the models directory
-models_dir = os.path.join('..', 'timbre_trap', 'models')
 # Construct a path to a top-level directory for DeepSalience
-deep_salience_dir = os.path.join(models_dir, 'deep_salience')
+deep_salience_dir = os.path.join('..', 'generated', 'deep_salience')
 # Create the necessary file hierarchy if it doesn't exist
 os.makedirs(os.path.join(deep_salience_dir, 'weights'), exist_ok=True)
 # Construct paths for the downloaded files

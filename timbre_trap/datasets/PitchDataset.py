@@ -1,3 +1,4 @@
+from timbre_trap.models import threshold, filter_non_peaks
 from . import BaseDataset, constants
 
 from abc import abstractmethod
@@ -19,15 +20,13 @@ class PitchDataset(BaseDataset):
 
         Parameters
         ----------
-        cqt : CQT
+        cqt : CQT module wrapper
           Instantiated CQT feature extraction module
         resample_idcs : list of [int, int]
           Time index boundaries to use when resampling
         """
 
         BaseDataset.__init__(self, **kwargs)
-
-        assert self.sample_rate == cqt.sample_rate
 
         self.cqt = cqt
 
@@ -242,7 +241,7 @@ class PitchDataset(BaseDataset):
         return activations
 
     @staticmethod
-    def activations_to_multi_pitch(activations, midi_freqs, thr=0.5):
+    def activations_to_multi_pitch(activations, midi_freqs, peaks_only=False, t=0.5):
         """
         Convert an array of discrete pitch activations into a sequence of active pitches.
 
@@ -252,8 +251,10 @@ class PitchDataset(BaseDataset):
           Binarized activations corresponding to midi_freqs
         midi_freqs : ndarray (F)
           MIDI frequency corresponding to each bin
-        thr : float [0, 1]
-          Threshold value
+        peaks_only : bool
+          Whether to perform local peak-picking
+        t : float [0, 1]
+          Threshold value to binarize input
 
         Returns
         ----------
@@ -264,8 +265,12 @@ class PitchDataset(BaseDataset):
         # Initialize empty pitch arrays for each frame
         multi_pitch = [np.empty(0)] * activations.shape[-1]
 
+        if peaks_only:
+            # Remove non-local-peaks along frequency
+            activations = filter_non_peaks(activations)
+
         # Make sure provided activations are binarized
-        assert np.alltrue(np.logical_or(activations == 0, activations == 1))
+        activations = threshold(filter_non_peaks(activations), t)
 
         # Determine which frames contain pitch activity
         non_silent_frames = np.where(np.sum(activations, axis=-2) > 0)[-1]

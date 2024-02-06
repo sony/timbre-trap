@@ -40,20 +40,41 @@ def stream_url_resource(url, save_path, chunk_size=1024):
     """
 
     # Create an HTTP GET request
-    r = requests.get(url, stream=True, headers={'Accept-Encoding': None})
-    # Determine the total number of bytes to be downloaded
-    total_length = int(r.headers.get('content-length'))
+    r = requests.get(url,
+                     stream=True,
+                     headers={'Accept-Encoding': None})
+    # Obtain iterable chunks of the resource
+    chunks = r.iter_content(chunk_size)
+
+    # Determine unit of one iteration
+    unit_scale = chunk_size / 1000 / 1000
+
+    # Determine total number of bytes to download
+    total_length = r.headers.get('content-length')
+
+    if total_length is not None:
+        # Create a stream with a progress bar
+        stream = tqdm(unit='MB',
+                      unit_scale=unit_scale,
+                      total=(int(total_length) / chunk_size),
+                      bar_format='{l_bar}{bar}| {n:.1f}/{total:.1f}MB [{elapsed}<{remaining}, ''{rate_fmt}{postfix}]')
+    else:
+        # Create a stream without a progress bar
+        stream = tqdm(unit='MB',
+                      unit_scale=unit_scale,
+                      bar_format='{n:.1f}MB [{elapsed}, ''{rate_fmt}{postfix}]')
 
     # Open the target file in write mode
     with open(save_path, 'wb') as file:
-        # Iteratively download chunks of the file,
-        # displaying a progress bar in the console
-        for chunk in tqdm(r.iter_content(chunk_size=chunk_size),
-                          total=int(total_length/chunk_size+1)):
+        # Download all chunks
+        for chunk in chunks:
             # If a chunk was successfully downloaded,
             if chunk:
                 # Write the chunk to the file
                 file.write(chunk)
+                # Manually update the progress bar
+                stream.update(len(chunk) / chunk_size)
+        stream.close()
 
 
 def unzip_and_remove(zip_path, target=None, tar=False):

@@ -1,11 +1,10 @@
-from .. import AudioDataset
 from ..Common import MedleyDB
 
 import warnings
 import os
 
 
-class MedleyDB(AudioDataset, MedleyDB):
+class MedleyDB(MedleyDB):
     """
     Implements a wrapper for the MedleyDB dataset to analyze the stems individually.
     """

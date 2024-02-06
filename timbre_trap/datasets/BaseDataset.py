@@ -15,7 +15,7 @@ class BaseDataset(Dataset):
     Implements bare minimum functionality for a usable dataset.
     """
 
-    def __init__(self, base_dir=None, splits=None, sample_rate=16000, n_secs=None, seed=0):
+    def __init__(self, base_dir=None, splits=None, n_secs=None, seed=0):
         """
         Instantiate the dataset wrapper.
 
@@ -25,8 +25,6 @@ class BaseDataset(Dataset):
           Path to the top-level directory
         splits : list of strings
           Partitions to include in the instance
-        sample_rate : int
-          Desired sample rate for the audio
         n_secs : float
           Number of seconds to which to trim or pad
         seed : int
@@ -56,7 +54,6 @@ class BaseDataset(Dataset):
             # Aggregate all track names from selected splits
             self.tracks += self.get_tracks(split)
 
-        self.sample_rate = sample_rate
         self.n_secs = n_secs
 
         # Initialize random number generator for the dataset instance

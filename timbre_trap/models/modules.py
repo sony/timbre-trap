@@ -4,7 +4,17 @@ import torch.nn as nn
 import torch
 
 
-class Transcriber(nn.Module):
+__all__ = [
+    'TimbreTrap',
+    'Encoder',
+    'Decoder',
+    'EncoderBlock',
+    'DecoderBlock',
+    'ResidualConv2dBlock'
+]
+
+
+class TimbreTrap(nn.Module):
     """
     Implements a 2D convolutional U-Net architecture based loosely on SoundStream.
     """

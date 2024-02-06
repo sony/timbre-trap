@@ -1,10 +1,10 @@
-from .. import BaseDataset
+from .. import AudioDataset
 
 import yaml
 import os
 
 
-class MedleyDB(BaseDataset):
+class MedleyDB(AudioDataset):
     """
     Implements the top-level wrapper for the MedleyDB dataset (https://medleydb.weebly.com/).
     """
@@ -17,7 +17,7 @@ class MedleyDB(BaseDataset):
         # Initialize dictionary for all metadata
         self.metadata = None
 
-        BaseDataset.__init__(self, **kwargs)
+        AudioDataset.__init__(self, **kwargs)
 
     def load_metadata(self):
         """
