@@ -82,8 +82,9 @@ class NoteDataset(PitchDataset):
                 pad_total = n_frames - times.size
                 # Randomly distribute between both sides
                 pad_left = self.rng.randint(0, pad_total)
-                # Pad the times with -1 to indicate invalid times
-                times = np.pad(times, (pad_left, pad_total - pad_left), constant_values=-1)
+                # Pad the times with -∞ and ∞ to indicate invalid times
+                times = np.pad(times, (pad_left, 0), constant_values=-np.inf)
+                times = np.pad(times, (0, pad_total - pad_left), constant_values=np.inf)
 
         # Convert note annotations to multi pitch annotations
         multi_pitch = self.notes_to_multi_pitch(pitches, intervals, times)

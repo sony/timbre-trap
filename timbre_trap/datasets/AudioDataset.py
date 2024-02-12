@@ -122,7 +122,7 @@ class AudioDataset(BaseDataset):
                 pad_total = n_samples - audio.size(-1)
                 # Randomly distribute between both sides
                 pad_left = self.rng.randint(0, pad_total)
-                # Pad the audio with zeros
+                # Pad the audio with zeros on both sides by sampled amount
                 audio = torch.nn.functional.pad(audio, (pad_left, pad_total - pad_left))
 
         # Pack the data into a dictionary

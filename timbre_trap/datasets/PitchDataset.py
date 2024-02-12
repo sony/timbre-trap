@@ -1,4 +1,4 @@
-from timbre_trap.models import threshold, filter_non_peaks
+from timbre_trap.framework import threshold, filter_non_peaks
 from . import BaseDataset, constants
 
 from abc import abstractmethod
@@ -122,9 +122,9 @@ class PitchDataset(BaseDataset):
                 pad_total = n_frames - times.size
                 # Randomly distribute between both sides
                 pad_left = self.rng.randint(0, pad_total)
-                # Pad the times with -1 to indicate invalid times
-                # TODO - verify that resampling after padding won't cause problems...
-                times = np.pad(times, (pad_left, pad_total - pad_left), constant_values=-1)
+                # Pad the times with -∞ and ∞ to indicate invalid times
+                times = np.pad(times, (pad_left, 0), constant_values=-np.inf)
+                times = np.pad(times, (0, pad_total - pad_left), constant_values=np.inf)
 
         # Obtain ground-truth resampled to computed times
         multi_pitch = self.resample_multi_pitch(_times, _pitches, times)
