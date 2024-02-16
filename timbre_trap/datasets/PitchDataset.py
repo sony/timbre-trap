@@ -74,8 +74,68 @@ class PitchDataset(BaseDataset):
 
         return NotImplementedError
 
+    def slice_times(self, times, n_frames=None, offset_t=None):
+        """
+        Slice frame times to a specified size.
+
+        Parameters
+        ----------
+        times : ndarray (N)
+          Time (seconds) associated with frames
+        n_frames : int or None (Optional)
+          Number of frames to slice
+        offset_t : float or None (Optional)
+          Offset (in seconds) for slice
+
+        Returns
+        ----------
+        times : ndarray (M)
+          Frame times sliced accordingly
+        offset_n : float
+          Offset (in frames) used to take slice
+        """
+
+        if n_frames is None:
+            # Determine the expected sequence length
+            n_samples = self.cqt.get_expected_samples(self.n_secs)
+            # Determine the corresponding number of frames
+            n_frames = self.cqt.get_expected_frames(n_samples)
+
+        if len(times) >= n_frames:
+            if offset_t is None:
+                # Sample a starting frame index randomly for the trim
+                start = self.rng.randint(0, times.size - n_frames + 1)
+                # Track frame offset
+                offset_n = start
+                # Trim times to the sequence length
+                times = times[start : start + n_frames]
+            else:
+                # Compute frame times for selected excerpt
+                times = self.cqt.get_times(n_frames) + offset_t
+                # Determine corresponding frame offset
+                offset_n = offset_t * (self.cqt.sample_rate / self.cqt.hop_length)
+        else:
+            # Determine how much padding is required
+            pad_total = n_frames - len(times)
+
+            if offset_t is None:
+                # Randomly distribute padding
+                pad_left = self.rng.randint(0, pad_total)
+            else:
+                # Infer padding distribution from provided offset
+                pad_left = round(abs(offset_t) * self.sample_rate / self.cqt.hop_length)
+
+            # Track frame offset
+            offset_n = -pad_left
+
+            # Pad the times with -∞ and ∞ to indicate invalid times
+            times = np.pad(times, (pad_left, 0), constant_values=-np.inf)
+            times = np.pad(times, (0, pad_total - pad_left), constant_values=np.inf)
+
+        return times, offset_n
+
     @abstractmethod
-    def __getitem__(self, index):
+    def __getitem__(self, index, n_samples=None, offset_t=None):
         """
         Extract the ground-truth data for a sampled track.
 
@@ -83,6 +143,10 @@ class PitchDataset(BaseDataset):
         ----------
         index : int
           Index of sampled track
+        n_samples : int
+          Expected number of samples for the track
+        offset_t : float or None (Optional)
+          Offset (in seconds) for slice
 
         Returns
         ----------
@@ -101,30 +165,16 @@ class PitchDataset(BaseDataset):
         # Read the track's multi-pitch annotations
         _times, _pitches = self.get_ground_truth(track)
 
-        # Determine frame times given the expected number of frames within amount of time defined by annotations
-        times = self.cqt.get_times(self.cqt.get_expected_frames(self.cqt.get_expected_samples(_times[-1])))
+        if n_samples is None:
+            # Infer expected number of samples from ground-truth
+            n_samples = self.cqt.get_expected_samples(_times[-1])
+
+        # Determine expected number of frames and corresponding times
+        times = self.cqt.get_times(self.cqt.get_expected_frames(n_samples))
 
         if self.n_secs is not None:
-            # Determine the required sequence length
-            n_samples = self.cqt.get_expected_samples(self.n_secs)
-            # Determine the corresponding number of frames
-            n_frames = self.cqt.get_expected_frames(n_samples)
-
-            if times.size >= n_frames:
-                # Sample a random starting index for the trim
-                start = self.rng.randint(0, times.size - n_frames + 1)
-                # Obtain the stopping index
-                stop = start + n_frames
-                # Trim times to frame length
-                times = times[start : stop]
-            else:
-                # Determine how much padding is required
-                pad_total = n_frames - times.size
-                # Randomly distribute between both sides
-                pad_left = self.rng.randint(0, pad_total)
-                # Pad the times with -∞ and ∞ to indicate invalid times
-                times = np.pad(times, (pad_left, 0), constant_values=-np.inf)
-                times = np.pad(times, (0, pad_total - pad_left), constant_values=np.inf)
+            # Randomly slice times using default sequence length
+            times, _ = self.slice_times(times, offset_t=offset_t)
 
         # Obtain ground-truth resampled to computed times
         multi_pitch = self.resample_multi_pitch(_times, _pitches, times)

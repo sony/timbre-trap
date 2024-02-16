@@ -32,7 +32,7 @@ class NoteDataset(PitchDataset):
         return NotImplementedError
 
     @abstractmethod
-    def __getitem__(self, index):
+    def __getitem__(self, index, n_samples=None, offset_t=None):
         """
         Extract the ground-truth data for a sampled track.
 
@@ -40,6 +40,10 @@ class NoteDataset(PitchDataset):
         ----------
         index : int
           Index of sampled track
+        n_samples : int
+          Expected number of samples for the track
+        offset_t : float or None (Optional)
+          Offset (in seconds) for slice
 
         Returns
         ----------
@@ -61,30 +65,16 @@ class NoteDataset(PitchDataset):
         # Convert note pitches to Hertz
         pitches = librosa.midi_to_hz(pitches)
 
-        # Determine frame times given the expected number of frames within amount of time defined by annotations
-        times = self.cqt.get_times(self.cqt.get_expected_frames(self.cqt.get_expected_samples(np.max(intervals))))
+        if n_samples is None:
+            # Infer expected number of samples from ground-truth
+            n_samples = self.cqt.get_expected_samples(np.max(intervals))
+
+        # Determine expected number of frames and corresponding times
+        times = self.cqt.get_times(self.cqt.get_expected_frames(n_samples))
 
         if self.n_secs is not None:
-            # Determine the required sequence length
-            n_samples = self.cqt.get_expected_samples(self.n_secs)
-            # Determine the corresponding number of frames
-            n_frames = self.cqt.get_expected_frames(n_samples)
-
-            if times.size >= n_frames:
-                # Sample a random starting index for the trim
-                start = self.rng.randint(0, times.size - n_frames + 1)
-                # Obtain the stopping index
-                stop = start + n_frames
-                # Trim times to frame length
-                times = times[start : stop]
-            else:
-                # Determine how much padding is required
-                pad_total = n_frames - times.size
-                # Randomly distribute between both sides
-                pad_left = self.rng.randint(0, pad_total)
-                # Pad the times with -∞ and ∞ to indicate invalid times
-                times = np.pad(times, (pad_left, 0), constant_values=-np.inf)
-                times = np.pad(times, (0, pad_total - pad_left), constant_values=np.inf)
+            # Randomly slice times using default sequence length
+            times, _ = self.slice_times(times, offset_t=offset_t)
 
         # Convert note annotations to multi pitch annotations
         multi_pitch = self.notes_to_multi_pitch(pitches, intervals, times)
