@@ -1,4 +1,4 @@
-from .utils import *
+from timbre_trap.utils.data import *
 
 from .BaseDataset import BaseDataset, ComboDataset, StemMixingDataset
 from .AudioDataset import AudioDataset

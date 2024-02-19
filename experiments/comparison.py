@@ -2,10 +2,8 @@ from timbre_trap.datasets.MixedMultiPitch import Bach10 as Bach10_Mixtures, Su
 from timbre_trap.datasets.SoloMultiPitch import GuitarSet
 from timbre_trap.datasets.NoteDataset import NoteDataset
 
-from timbre_trap.datasets.utils import stream_url_resource, constants
-from timbre_trap.models.utils import filter_non_peaks, threshold
 from evaluate import MultipitchEvaluator
-from utils import *
+from timbre_trap.utils import *
 
 from tqdm import tqdm
 
@@ -79,10 +77,10 @@ script_path = os.path.join(deep_salience_dir, script_name)
 weights_path = os.path.join(deep_salience_dir, 'weights', weights_name)
 try:
     # Attempt to import the DeepSalience inference code
-    from timbre_trap.models.deep_salience.predict_on_audio import (model_def,
-                                                                   compute_hcqt,
-                                                                   get_single_test_prediction,
-                                                                   get_multif0)
+    from generated.deep_salience.predict_on_audio import (model_def,
+                                                          compute_hcqt,
+                                                          get_single_test_prediction,
+                                                          get_multif0)
 except ModuleNotFoundError:
     # Point to the top-level directory containing files to download
     url_dir = 'https://raw.githubusercontent.com/rabitt/ismir2017-deepsalience/master/predict'
@@ -110,10 +108,10 @@ except ModuleNotFoundError:
         f.writelines(lines)
 
     # Retry the original import
-    from timbre_trap.models.deep_salience.predict_on_audio import (model_def,
-                                                                   compute_hcqt,
-                                                                   get_single_test_prediction,
-                                                                   get_multif0)
+    from generated.deep_salience.predict_on_audio import (model_def,
+                                                          compute_hcqt,
+                                                          get_single_test_prediction,
+                                                          get_multif0)
 # Initialize DeepSalience
 deep_salience = model_def()
 # Load the weights from the paper

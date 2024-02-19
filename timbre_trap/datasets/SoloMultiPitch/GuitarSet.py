@@ -1,5 +1,4 @@
-from .. import MPEDataset
-from ..utils import *
+from .. import MPEDataset, stream_url_resource, unzip_and_remove
 
 import numpy as np
 import jams

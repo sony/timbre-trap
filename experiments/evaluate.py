@@ -1,7 +1,6 @@
 from timbre_trap.datasets import NoteDataset, constants
-from timbre_trap.models.utils import filter_non_peaks, threshold
-from timbre_trap.models.objectives import *
-from utils import *
+from timbre_trap.framework.objectives import *
+from timbre_trap.utils import *
 
 from torchmetrics.audio import SignalDistortionRatio
 from scipy.stats import hmean

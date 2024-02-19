@@ -1,13 +1,11 @@
 from timbre_trap.datasets.MixedMultiPitch import Bach10 as Bach10_Mixtures
 from timbre_trap.datasets.SoloMultiPitch import Bach10 as Bach10_Stems
-from timbre_trap.datasets import constants
-from utils import *
+from timbre_trap.utils import *
 
 from torch.utils.data import DataLoader
 from matplotlib import rcParams
 from tqdm import tqdm
 
-import shutil
 import torch
 import os
 

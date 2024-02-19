@@ -1,20 +1,126 @@
-import numpy as np
-import warnings
-import scipy
+import random
 import torch
+import math
 
 
 __all__ = [
+    'seed_everything',
+    'print_and_log',
+    'DataParallel',
+    'CosineWarmup',
     'sum_gradient_norms',
     'average_gradient_norms',
     'get_max_gradient',
     'get_max_gradient_norm',
-    'log_gradient_norms',
-    'DataParallel',
-    'filter_non_peaks',
-    'threshold',
-    'debug_nans'
+    'log_gradient_norms'
 ]
+
+
+def seed_everything(seed):
+    """
+    Set all necessary seeds for PyTorch at once.
+    WARNING: the number of workers in the training loader affects behavior:
+             this is because each sample will inevitably end up being processed
+             by a different worker if num_workers is changed, and each worker
+             has its own random seed
+
+    Parameters
+    ----------
+    seed : int
+      Seed to use for random number generation
+    """
+
+    torch.backends.cudnn.deterministic = True
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    random.seed(seed)
+
+
+def print_and_log(text, path=None):
+    """
+    Print a string to the console and optionally log it to a specified file.
+
+    Parameters
+    ----------
+    text : str
+      Text to print/log
+    path : str (None to bypass)
+      Path to file to write text
+    """
+
+    # Print text to the console
+    print(text)
+
+    if path is not None:
+        with open(path, 'a') as f:
+            # Append the text to the file
+            print(text, file=f)
+
+
+class DataParallel(torch.nn.DataParallel):
+    """
+    A custom nn.DataParallel module to retain method names and attributes.
+    """
+
+    def __getattr__(self, name):
+        try:
+            # Check DataParallel
+            return super().__getattr__(name)
+        except AttributeError:
+            # Check the wrapped model
+            return getattr(self.module, name)
+
+
+class CosineWarmup(torch.optim.lr_scheduler.LRScheduler):
+    """
+    A simple wrapper to implement reverse cosine annealing as a PyTorch LRScheduler.
+    """
+
+    def __init__(self, optimizer, n_steps, last_epoch=-1, verbose=False):
+        """
+        Initialize the scheduler and set the duration of warmup.
+
+        Parameters
+        ----------
+        See LRScheduler class...
+        """
+
+        self.n_steps = max(1, n_steps)
+
+        super().__init__(optimizer, last_epoch, verbose)
+
+    def is_active(self):
+        """
+        Helper to determine when to stop stepping.
+        """
+
+        active = self.last_epoch < self.n_steps
+
+        return active
+
+    def get_lr(self):
+        """
+        Obtain scheduler learning rates.
+        """
+
+        # Simply use closed form expression
+        lr = self._get_closed_form_lr()
+
+        return lr
+
+    def _get_closed_form_lr(self):
+        """
+        Compute the learning rates for the current step.
+        """
+
+        # Clamp the current step at the chosen number of steps
+        curr_step = max(0, min(self.last_epoch, self.n_steps))
+        # Compute scaling corresponding to current step
+        scaling = 1 - 0.5 * (1 + math.cos(curr_step * math.pi / self.n_steps))
+        # Apply the scaling to each learning rate
+        lr = [scaling * base_lr for base_lr in self.base_lrs]
+
+        return lr
 
 
 def sum_gradient_norms(module):
@@ -154,108 +260,3 @@ def log_gradient_norms(module, writer, i=0, prefix='gradients/norm'):
             grad_norm = values.grad.norm(2).item()
             # Log the norm of the gradients for this layer
             writer.add_scalar(f'{prefix}/{layer}', grad_norm, i)
-
-
-class DataParallel(torch.nn.DataParallel):
-    """
-    A custom nn.DataParallel module to retain method names and attributes.
-    """
-
-    def __getattr__(self, name):
-        try:
-            # Check DataParallel
-            return super().__getattr__(name)
-        except AttributeError:
-            # Check the wrapped model
-            return getattr(self.module, name)
-
-
-def filter_non_peaks(_arr):
-    """
-    Remove any values that are not peaks along the vertical axis.
-
-    Parameters
-    ----------
-    _arr : ndarray (... x H x W)
-      Original data
-
-    Returns
-    ----------
-    arr : ndarray (... x H x W)
-      Data with non-peaks removed
-    """
-
-    # Create an extra row to all for edge peaks
-    extra_row = np.zeros(tuple(_arr.shape[:-2]) + (1, _arr.shape[-1]))
-
-    # Pad the given array with extra rows
-    padded_arr = np.concatenate((extra_row, _arr, extra_row), axis=-2)
-
-    # Initialize an array to hold filtered data
-    arr = np.zeros(padded_arr.shape)
-
-    # Determine which indices correspond to peaks
-    peaks = scipy.signal.argrelmax(padded_arr, axis=-2)
-
-    # Transfer peaks to new array
-    arr[peaks] = padded_arr[peaks]
-
-    # Remove padded rows
-    arr = arr[..., 1 : -1, :]
-
-    return arr
-
-
-def threshold(_arr, t=0.5):
-    """
-    Binarize data based on a given threshold.
-
-    Parameters
-    ----------
-    _arr : ndarray
-      Original data
-    t : float [0, 1]
-      Threshold value
-
-    Returns
-    ----------
-    arr : ndarray
-      Binarized data
-    """
-
-    # Initialize an array to hold binarized data
-    arr = np.zeros(_arr.shape)
-    # Set values above threshold to one
-    arr[_arr >= t] = 1
-
-    return arr
-
-
-def debug_nans(tensor, tag='tensor'):
-    """
-    Check if a tensor contains NaNs and throw warnings when this happens.
-
-    Parameters
-    ----------
-    tensor : Tensor
-      Arbitrary tensor data
-    tag : str
-      Name of the tensor for warning message
-
-    Returns
-    ----------
-    contains : bool
-      Whether input tensor contains NaN values
-    """
-
-    # Default indicator
-    contains = False
-
-    if torch.sum(tensor.isnan()):
-        # Throw a warning if the tensor contains NaNs
-        warnings.warn(f'{tag} contains NaNs!!!')
-
-        # Set indicator
-        contains = True
-
-    return contains

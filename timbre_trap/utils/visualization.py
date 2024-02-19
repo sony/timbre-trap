@@ -1,83 +1,16 @@
+from .processing import to_array
+
 from sklearn.manifold import TSNE
 
 import matplotlib.pyplot as plt
 import numpy as np
-import random
-import torch
-import math
 
 
 __all__ = [
-    'seed_everything',
-    'to_array',
-    'print_and_log',
     'initialize_figure',
     'plot_magnitude',
-    'plot_latents',
-    'CosineWarmup',
+    'plot_latents'
 ]
-
-
-def seed_everything(seed):
-    """
-    Set all necessary seeds for PyTorch at once.
-    WARNING: the number of workers in the training loader affects behavior:
-             this is because each sample will inevitably end up being processed
-             by a different worker if num_workers is changed, and each worker
-             has its own random seed
-
-    Parameters
-    ----------
-    seed : int
-      Seed to use for random number generation
-    """
-
-    torch.backends.cudnn.deterministic = True
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
-    random.seed(seed)
-
-
-def to_array(tensor):
-    """
-    Convert a PyTorch Tensor to a Numpy ndarray.
-
-    Parameters
-    ----------
-    tensor : Tensor
-      Arbitrary tensor data
-
-    Returns
-    ----------
-    arr : ndarray
-      Same data as Numpy ndarray
-    """
-
-    # Move to CPU, detach gradient, and convert to ndarray
-    arr = tensor.cpu().detach().numpy()
-
-    return arr
-
-
-def print_and_log(text, path=None):
-    """
-    Print a string to the console and optionally log it to a specified file.
-
-    Parameters
-    ----------
-    text : str
-      Text to print/log
-    path : str (None to bypass)
-      Path to file to write text
-    """
-
-    # Print text to the console
-    print(text)
-
-    if path is not None:
-        with open(path, 'a') as f:
-            # Append the text to the file
-            print(text, file=f)
 
 
 def initialize_figure(figsize=(9, 3), interactive=False):
@@ -245,55 +178,3 @@ def plot_latents(latents, labels, seed=0, fig=None, save_path=None):
         fig.savefig(save_path, bbox_inches='tight', pad_inches=0)
 
     return fig
-
-
-class CosineWarmup(torch.optim.lr_scheduler.LRScheduler):
-    """
-    A simple wrapper to implement reverse cosine annealing as a PyTorch LRScheduler.
-    """
-
-    def __init__(self, optimizer, n_steps, last_epoch=-1, verbose=False):
-        """
-        Initialize the scheduler and set the duration of warmup.
-
-        Parameters
-        ----------
-        See LRScheduler class...
-        """
-
-        self.n_steps = max(1, n_steps)
-
-        super().__init__(optimizer, last_epoch, verbose)
-
-    def is_active(self):
-        """
-        Helper to determine when to stop stepping.
-        """
-
-        active = self.last_epoch < self.n_steps
-
-        return active
-
-    def get_lr(self):
-        """
-        Obtain scheduler learning rates.
-        """
-
-        # Simply use closed form expression
-        lr = self._get_closed_form_lr()
-
-        return lr
-
-    def _get_closed_form_lr(self):
-        """
-        Compute the learning rates for the current step.
-        """
-
-        # Clamp the current step at the chosen number of steps
-        curr_step = max(0, min(self.last_epoch, self.n_steps))
-        # Compute scaling corresponding to current step
-        scaling = 1 - 0.5 * (1 + math.cos(curr_step * math.pi / self.n_steps))
-        # Apply the scaling to each learning rate
-        lr = [scaling * base_lr for base_lr in self.base_lrs]
-
-        return lr

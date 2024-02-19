@@ -2,9 +2,6 @@ from . import AudioDataset, PitchDataset, constants
 
 from abc import abstractmethod
 
-import numpy as np
-import torch
-
 
 class MPEDataset(AudioDataset, PitchDataset):
     """

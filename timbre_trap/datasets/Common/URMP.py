@@ -1,5 +1,4 @@
-from .. import BaseDataset
-from ..utils import *
+from .. import BaseDataset, stream_url_resource, unzip_and_remove, change_base_dir
 
 import os
 

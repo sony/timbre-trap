@@ -1,10 +1,6 @@
-from . import MPEDataset, AudioDataset, NoteDataset, constants
+from . import MPEDataset, NoteDataset, constants
 
 from abc import abstractmethod
-
-import numpy as np
-import librosa
-import torch
 
 
 class AMTDataset(MPEDataset, NoteDataset):

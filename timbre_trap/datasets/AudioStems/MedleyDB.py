@@ -1,6 +1,5 @@
 from ..Common import MedleyDB
 
-import warnings
 import os
 
 

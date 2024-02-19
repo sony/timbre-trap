@@ -2,13 +2,12 @@ from timbre_trap.datasets.MixedMultiPitch import URMP as URMP_Mixtures, Bach10 a
 from timbre_trap.datasets.SoloMultiPitch import URMP as URMP_Stems, MusicNet as MusicNet_Stems, MedleyDB_Pitch, MAESTRO, GuitarSet
 from timbre_trap.datasets.AudioStems import MedleyDB as MedleyDB_Stems
 from timbre_trap.datasets.AudioMixtures import MedleyDB as MedleyDB_Mixtures, FMA
-from timbre_trap.datasets import ComboDataset, constants, StemMixingDataset
-from timbre_trap.models import DataParallel, Transcriber
+from timbre_trap.datasets import ComboDataset, StemMixingDataset
+from timbre_trap.framework import TimbreTrap
 
-from timbre_trap.models.objectives import *
-from timbre_trap.models.utils import *
+from timbre_trap.framework.objectives import *
+from timbre_trap.utils import *
 from evaluate import evaluate
-from utils import *
 
 from torch.utils.tensorboard import SummaryWriter
 from sacred.observers import FileStorageObserver
@@ -37,7 +36,7 @@ def config():
     checkpoint_path = None
 
     # Maximum number of training iterations to conduct
-    max_epochs = 10000
+    max_epochs = 5000
 
     # Number of iterations between checkpoints
     checkpoint_interval = 250
@@ -59,7 +58,7 @@ def config():
     }
 
     # Number of epochs spanning warmup phase (0 to disable)
-    n_epochs_warmup = 5
+    n_epochs_warmup = 50
 
     # Set validation dataset to compare for learning rate decay and early stopping
     validation_criteria_set = URMP_Mixtures.name()
@@ -83,7 +82,7 @@ def config():
     n_epochs_early_stop = None
 
     # IDs of the GPUs to use, if available
-    gpu_ids = [1, 0]
+    gpu_ids = [0]
 
     # Random seed for this experiment
     seed = 2
@@ -155,15 +154,15 @@ def train_model(checkpoint_path, max_epochs, checkpoint_interval, batch_size, n_
 
     if checkpoint_path is None:
         # Initialize autoencoder model and train from scratch
-        model = Transcriber(sample_rate=sample_rate,
-                            n_octaves=n_octaves,
-                            bins_per_octave=bins_per_octave,
-                            secs_per_block=3,
-                            latent_size=128,
-                            model_complexity=2,
-                            skip_connections=False)
+        model = TimbreTrap(sample_rate=sample_rate,
+                           n_octaves=n_octaves,
+                           bins_per_octave=bins_per_octave,
+                           secs_per_block=3,
+                           latent_size=128,
+                           model_complexity=2,
+                           skip_connections=False)
     else:
-        # Load a prexisting model and resume training
+        # Load a preexisting model and resume training
         model = torch.load(checkpoint_path, map_location=device)
 
     if len(gpu_ids) > 1:
