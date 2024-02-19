@@ -1,134 +1,14 @@
-from timbre_trap.datasets import NoteDataset, constants
+from timbre_trap.datasets import NoteDataset
 from timbre_trap.framework.objectives import *
 from timbre_trap.utils import *
 
 from torchmetrics.audio import SignalDistortionRatio
-from scipy.stats import hmean
-from copy import deepcopy
 
 import numpy as np
 import mir_eval
 import warnings
 import librosa
 import torch
-import sys
-
-
-EPSILON = sys.float_info.epsilon
-
-
-class MultipitchEvaluator(object):
-    """
-    A simple tracker to store results and compute statistics across an entire test set.
-    """
-
-    def __init__(self, tolerance=0.5):
-        """
-        Initialize the tracker.
-
-        Parameters
-        ----------
-        tolerance : float
-          Semitone tolerance for correct predictions
-        """
-
-        self.tolerance = tolerance
-
-        # Initialize dictionary to track results
-        self.results = None
-        self.reset_results()
-
-    def reset_results(self):
-        """
-        Reset tracked results to empty dictionary.
-        """
-
-        self.results = {}
-
-    def append_results(self, results):
-        """
-        Append the results for a test sample.
-
-        Parameters
-        ----------
-        results : dict of {str : float} entries
-          Numerical results for a single sample
-        """
-
-        # Loop through all keys
-        for key in results.keys():
-            if key in self.results.keys():
-                # Add the provided score to the pre-existing array
-                self.results[key] = np.append(self.results[key], results[key])
-            else:
-                # Initialize a new array for the metric
-                self.results[key] = np.array([results[key]])
-
-    def average_results(self):
-        """
-        Compute the mean and standard deviation for each metric across currently tracked results.
-
-        Returns
-        ----------
-        mean : dict of {str : float} entries
-          Average scores across currently tracked results
-        std_dev : dict of {str : float} entries
-          Standard deviation of scores across currently tracked results
-        """
-
-        # Clone all current scores
-        mean = deepcopy(self.results)
-        std_dev = deepcopy(self.results)
-
-        # Loop through all metrics
-        for key in self.results.keys():
-            # Compute statistics for the metric
-            mean[key] = round(np.mean(mean[key]), 5)
-            std_dev[key] = round(np.std(std_dev[key]), 5)
-
-        return mean, std_dev
-
-    def evaluate(self, times_est, multi_pitch_est, times_ref, multi_pitch_ref):
-        """
-        Compute MPE results for a set of predictions using mir_eval.
-
-        Parameters
-        ----------
-        times_est : ndarray (T)
-          Times corresponding to multi-pitch estimates
-        multi_pitch_est : list of ndarray (T x [...])
-          Frame-level multi-pitch estimates
-        times_ref : ndarray (K)
-          Times corresponding to ground-truth multi-pitch
-        multi_pitch_ref : list of ndarray (K x [...])
-          Frame-level multi-pitch ground-truth
-
-        Returns
-        ----------
-        results : dict of {str : float} entries
-          Numerical MPE results for a set of predictions
-        """
-
-        # Use mir_eval to compute multi-pitch results at specified tolerance
-        results = mir_eval.multipitch.evaluate(times_ref, multi_pitch_ref,
-                                               times_est, multi_pitch_est,
-                                               window=self.tolerance)
-
-        # Make keys lowercase and switch to regular dict type
-        results = {k.lower(): results[k] for k in results.keys()}
-
-        # Calculate the f1-score using the harmonic mean formula
-        f_measure = hmean([results['precision'] + EPSILON,
-                           results['recall'] + EPSILON]) - EPSILON
-
-        # Add f1-score to the mir_eval results
-        results.update({'f1-score' : f_measure})
-
-        for k in deepcopy(results).keys():
-            # Prepend tag to indicate MPE metric
-            results[f'mpe/{k}'] = results.pop(k)
-
-        return results
 
 
 def evaluate(model, eval_set, multipliers, writer=None, i=0, device='cpu'):

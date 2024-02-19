@@ -44,7 +44,7 @@ def initialize_figure(figsize=(9, 3), interactive=False):
     return fig
 
 
-def plot_magnitude(magnitude, extent=None, fig=None, save_path=None):
+def plot_magnitude(magnitude, extent=None, colorbar=False, fig=None, save_path=None):
     """
     Plot magnitude coefficients within range [0, 1].
 
@@ -56,6 +56,8 @@ def plot_magnitude(magnitude, extent=None, fig=None, save_path=None):
       T - number of frames
     extent : list [l, r, b, t] or None (Optional)
       Boundaries of horizontal and vertical axis
+    colorbar : bool
+      Whether to include a colorbar for reference
     fig : matplotlib Figure object
       Preexisting figure to use for plotting
     save_path : string or None (Optional)
@@ -64,7 +66,7 @@ def plot_magnitude(magnitude, extent=None, fig=None, save_path=None):
     Returns
     ----------
     fig : matplotlib Figure object
-      A handle for the figure used to plot the TFR
+      A handle for the figure used to plot TFR
     """
 
     if fig is None:
@@ -80,8 +82,8 @@ def plot_magnitude(magnitude, extent=None, fig=None, save_path=None):
                   extent[3], extent[2]]
 
     # Plot magnitude as an image
-    ax.imshow(magnitude, vmin=0, vmax=1, extent=extent)
-    # Flip the axis for ascending pitch
+    img = ax.imshow(magnitude, vmin=0, vmax=1, extent=extent)
+    # Flip y-axis for ascending pitch
     ax.invert_yaxis()
     # Make sure the image fills the figure
     ax.set_aspect('auto')
@@ -93,6 +95,10 @@ def plot_magnitude(magnitude, extent=None, fig=None, save_path=None):
     else:
         # Hide the axes
         ax.axis('off')
+
+    if colorbar:
+        # Add a legend to image
+        fig.colorbar(img)
 
     if save_path is not None:
         # Save the figure
