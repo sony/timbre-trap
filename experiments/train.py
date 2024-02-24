@@ -1,8 +1,8 @@
-from timbre_trap.datasets.MixedMultiPitch import URMP as URMP_Mixtures, Bach10 as Bach10_Mixtures, Su, MusicNet as MusicNet_Mixtures, TRIOS
-from timbre_trap.datasets.SoloMultiPitch import URMP as URMP_Stems, MusicNet as MusicNet_Stems, MedleyDB_Pitch, MAESTRO, GuitarSet
+from timbre_trap.datasets.MixedMultiPitch import URMP as URMP_Mixtures, Bach10 as Bach10_Mixtures, Su, TRIOS
+from timbre_trap.datasets.SoloMultiPitch import URMP as URMP_Stems, MedleyDB_Pitch, GuitarSet
 from timbre_trap.datasets.AudioStems import MedleyDB as MedleyDB_Stems
 from timbre_trap.datasets.AudioMixtures import MedleyDB as MedleyDB_Mixtures, FMA
-from timbre_trap.datasets import ComboDataset, StemMixingDataset
+from timbre_trap.datasets import ComboDataset
 from timbre_trap.framework import TimbreTrap
 
 from timbre_trap.framework.objectives import *
