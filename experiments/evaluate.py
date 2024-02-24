@@ -1,5 +1,5 @@
 from timbre_trap.datasets import NoteDataset
-from timbre_trap.framework.objectives import *
+from timbre_trap.framework import *
 from timbre_trap.utils import *
 
 from torchmetrics.audio import SignalDistortionRatio
@@ -30,10 +30,15 @@ def evaluate(model, eval_set, multipliers, writer=None, i=0, device='cpu'):
         for data in eval_set:
             # Determine which track is being processed
             track = data[constants.KEY_TRACK]
-            # Extract audio and add to the appropriate device
-            audio = data[constants.KEY_AUDIO].to(device).unsqueeze(0)
-            # Extract ground-truth targets as a Tensor
-            targets = torch.Tensor(data[constants.KEY_GROUND_TRUTH])
+            # Extract audio and add to appropriate device
+            audio = data[constants.KEY_AUDIO].to(device)
+            # Extract ground-truth targets
+            targets = data[constants.KEY_GROUND_TRUTH]
+            # Convert to Tensor and add to appropriate device
+            targets = torch.Tensor(targets).to(device)
+            # Add batch dimension
+            audio = audio.unsqueeze(0)
+            targets = targets.unsqueeze(0)
 
             if isinstance(eval_set, NoteDataset):
                 # Extract frame times of ground-truth targets as reference
@@ -51,17 +56,27 @@ def evaluate(model, eval_set, multipliers, writer=None, i=0, device='cpu'):
             # Pad audio to next multiple of block length
             audio = model.sliCQ.pad_to_block_length(audio)
 
+            # Obtain spectral coefficients of audio
+            coefficients = model.sliCQ(audio)
+
+            if isinstance(model, TimbreTrapMag):
+                # Convert coefficients to magnitude for reconstruction loss
+                coefficients = model.sliCQ.to_magnitude(coefficients).unsqueeze(-3)
+            if isinstance(model, TimbreTrapMagDB):
+                # Convert magnitude to rescaled decibels
+                coefficients = model.sliCQ.to_decibels(coefficients)
+
             # Perform transcription and reconstruction simultaneously
             reconstruction, latents, transcription_coeffs, \
             transcription_rec, transcription_scr, losses = model(audio, multipliers['consistency'])
 
-            # Extract magnitude of decoded coefficients and convert to activations
-            transcription = torch.nn.functional.tanh(model.sliCQ.to_magnitude(transcription_coeffs))
+            # Convert transcription coefficients to activations
+            transcription = model.to_activations(transcription_coeffs)
+            # Remove batch dimension and convert to array
+            activations = to_array(transcription.squeeze(0))
 
             # Determine the times associated with predictions
             times_est = model.sliCQ.get_times(model.sliCQ.get_expected_frames(audio.size(-1)))
-            # Perform peak-picking and thresholding on the activations
-            activations = threshold(filter_non_peaks(to_array(transcription)), 0.5).squeeze(0)
 
             if np.sum(activations[valid_freqs]):
                 # Print a warning message indicating invalid predictions
@@ -71,23 +86,21 @@ def evaluate(model, eval_set, multipliers, writer=None, i=0, device='cpu'):
                 activations[valid_freqs] = 0
 
             # Convert the activations to frame-level multi-pitch estimates
-            multi_pitch_est = eval_set.activations_to_multi_pitch(activations, model.sliCQ.midi_freqs)
+            multi_pitch_est = eval_set.activations_to_multi_pitch(activations, model.sliCQ.midi_freqs, peaks_only=True)
 
             # Compute results for this track using mir_eval multi-pitch metrics
             results = evaluator.evaluate(times_est, multi_pitch_est, times_ref, multi_pitch_ref)
             # Store the computed results
             evaluator.append_results(results)
 
-            # Invert reconstructed spectral coefficients to synthesize audio
-            synth = model.sliCQ.decode(reconstruction)
+            if not isinstance(model, TimbreTrapMag):
+                # Invert reconstructed spectral coefficients to synthesize audio
+                synth = model.sliCQ.decode(reconstruction)
 
-            # Compute SDR w.r.t. original (padded) audio
-            sdr = sdr_module(synth, audio).item()
-            # Store the SDR for the track
-            evaluator.append_results({'reconstruction/SDR' : sdr})
-
-            # Obtain spectral coefficients of audio
-            coefficients = model.sliCQ(audio)
+                # Compute SDR w.r.t. original (padded) audio
+                sdr = sdr_module(synth, audio).item()
+                # Store the SDR for the track
+                evaluator.append_results({'reconstruction/SDR' : sdr})
 
             # Compute the reconstruction loss for the track
             reconstruction_loss = compute_reconstruction_loss(reconstruction, coefficients)
@@ -99,7 +112,7 @@ def evaluate(model, eval_set, multipliers, writer=None, i=0, device='cpu'):
             targets = torch.nn.functional.pad(targets, (0, n_pad_frames))
 
             # Compute the transcription loss for the track
-            transcription_loss = compute_transcription_loss(transcription.squeeze(), targets.to(device), True)
+            transcription_loss = compute_transcription_loss(transcription, targets, True)
 
             # Compute the total loss for the track
             total_loss = multipliers['reconstruction'] * reconstruction_loss + \
@@ -140,17 +153,6 @@ def evaluate(model, eval_set, multipliers, writer=None, i=0, device='cpu'):
             # Extract magnitude from reconstructed spectral coefficients and convert to decibels
             reconstruction = model.sliCQ.to_decibels(model.sliCQ.to_magnitude(reconstruction))
 
-            # Add channel dimension to input/outputs
-            features_log = features_log.unsqueeze(-3)
-            reconstruction = reconstruction.unsqueeze(-3)
-            transcription = transcription.unsqueeze(-3)
-            targets = targets.unsqueeze(-3)
-
-            # Remove the batch dimension of input/outputs
-            features_log = features_log.squeeze(0)
-            reconstruction = reconstruction.squeeze(0)
-            transcription = transcription.squeeze(0)
-
             # Reduce time resolution for better TensorBoard visualization
             features_log = torch.nn.functional.avg_pool2d(features_log, kernel_size=(1, 7))
             reconstruction = torch.nn.functional.avg_pool2d(reconstruction, kernel_size=(1, 7))
@@ -158,9 +160,9 @@ def evaluate(model, eval_set, multipliers, writer=None, i=0, device='cpu'):
             targets = torch.nn.functional.avg_pool2d(targets, kernel_size=(1, 7))
 
             # Visualize predictions for the final sample of the evaluation dataset
-            writer.add_image(f'{eval_set.name()}/vis/original CQT', features_log.flip(-2), i)
-            writer.add_image(f'{eval_set.name()}/vis/recovered CQT', reconstruction.flip(-2), i)
+            writer.add_image(f'{eval_set.name()}/vis/magnitude CQT', features_log.flip(-2), i)
+            writer.add_image(f'{eval_set.name()}/vis/reconstruction', reconstruction.flip(-2), i)
             writer.add_image(f'{eval_set.name()}/vis/ground-truth', targets.flip(-2), i)
-            writer.add_image(f'{eval_set.name()}/vis/estimated', transcription.flip(-2), i)
+            writer.add_image(f'{eval_set.name()}/vis/transcription', transcription.flip(-2), i)
 
     return average_results

@@ -3,7 +3,7 @@ from timbre_trap.datasets.SoloMultiPitch import URMP as URMP_Stems, MedleyDB_Pit
 from timbre_trap.datasets.AudioStems import MedleyDB as MedleyDB_Stems
 from timbre_trap.datasets.AudioMixtures import MedleyDB as MedleyDB_Mixtures, FMA
 from timbre_trap.datasets import ComboDataset
-from timbre_trap.framework import TimbreTrap
+from timbre_trap.framework import *
 
 from timbre_trap.framework.objectives import *
 from timbre_trap.utils import *
@@ -140,10 +140,8 @@ def train_model(checkpoint_path, max_epochs, checkpoint_interval, batch_size, n_
     urmp_base_dir = None
     mydb_ptch_base_dir = None
     mydb_base_dir = None
-    mstro_base_dir = None
     bch10_base_dir = None
     su_base_dir = None
-    mnet_base_dir = None
     gset_base_dir = None
     fma_base_dir = None
     trios_base_dir = None
@@ -409,13 +407,20 @@ def train_model(checkpoint_path, max_epochs, checkpoint_interval, batch_size, n_
             # Obtain spectral coefficients of audio
             coefficients = model.sliCQ(audio)
 
+            if isinstance(model, TimbreTrapMag):
+                # Convert coefficients to magnitude for reconstruction loss
+                coefficients = model.sliCQ.to_magnitude(coefficients).unsqueeze(-3)
+            if isinstance(model, TimbreTrapMagDB):
+                # Convert magnitude to rescaled decibels
+                coefficients = model.sliCQ.to_decibels(coefficients)
+
             with torch.autocast(device_type=f'cuda'):
                 # Perform transcription and reconstruction simultaneously
                 reconstruction, latents, transcription_coeffs, \
                 transcription_rec, transcription_scr, losses = model(audio, multipliers['consistency'])
 
-                # Extract magnitude of decoded coefficients and convert to activations
-                transcription = torch.nn.functional.tanh(model.sliCQ.to_magnitude(transcription_coeffs))
+                # Convert transcription coefficients to activations
+                transcription = model.to_activations(transcription_coeffs)
 
                 # Compute the reconstruction loss for the batch
                 reconstruction_loss = compute_reconstruction_loss(reconstruction, coefficients)

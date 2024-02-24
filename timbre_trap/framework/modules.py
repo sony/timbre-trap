@@ -11,8 +11,10 @@ __all__ = [
     'EncoderBlock',
     'DecoderBlock',
     'ResidualConv2dBlock',
-    'FiLM',
     'TimbreTrapFiLM',
+    'FiLM',
+    'TimbreTrapMag',
+    'TimbreTrapMagDB'
 ]
 
 
@@ -165,7 +167,27 @@ class TimbreTrap(nn.Module):
         # Estimate pitch using transcription switch
         coefficients = self.decode(latents, embeddings, True)
 
-        # Extract magnitude of decoded coefficients and convert to activations
+        # Convert transcription coefficients to activations
+        activations = self.to_activations(coefficients)
+
+        return activations
+
+    def to_activations(self, coefficients):
+        """
+        Obtain activations for a batch of transcription coefficients.
+
+        Parameters
+        ----------
+        coefficients : Tensor (B x 2 x F X T)
+          Batch of transcription spectral coefficients
+
+        Returns
+        ----------
+        activations : Tensor (B x F X T)
+          Batch of multi-pitch activations [0, 1]
+        """
+
+        # Extract magnitude of decoded coefficients and compress to [0, 1] range
         activations = torch.nn.functional.tanh(self.sliCQ.to_magnitude(coefficients))
 
         return activations
@@ -747,3 +769,188 @@ class FiLM(nn.Module):
         y = y.transpose(-1, -2)
 
         return y
+
+
+class TimbreTrapMag(TimbreTrap):
+    """
+    Magnitude-CQT (amplitude) variant of autoencoder.
+    """
+
+    def __init__(self, sample_rate, n_octaves, bins_per_octave, secs_per_block=3, latent_size=None, model_complexity=1, skip_connections=False):
+        """
+        Initialize the full autoencoder.
+
+        Parameters
+        ----------
+        See Transcriber class...
+        """
+
+        TimbreTrap.__init__(self, sample_rate, n_octaves, bins_per_octave, secs_per_block,
+                                  latent_size, model_complexity, skip_connections)
+
+        convin_out_channels = self.encoder.convin[0].out_channels
+        convout_in_channels = self.decoder.convout.in_channels
+
+        self.encoder.convin = nn.Sequential(
+            nn.Conv2d(1, convin_out_channels, kernel_size=3, padding='same'),
+            nn.ELU(inplace=True)
+        )
+
+        self.decoder.convout = nn.Conv2d(convout_in_channels, 1, kernel_size=3, padding='same')
+
+    def encode(self, audio):
+        """
+        Encode a batch of raw audio into latent codes.
+
+        Parameters
+        ----------
+        audio : Tensor (B x 1 x T)
+          Batch of input raw audio
+
+        Returns
+        ----------
+        latents : Tensor (B x D_lat x T)
+          Batch of latent codes
+        embeddings : list of [Tensor (B x C x H x T)]
+          Embeddings produced by encoder at each level
+        losses : dict containing
+          ...
+        """
+
+        # Compute CQT spectral features and convert to magnitude
+        coefficients = self.sliCQ.to_magnitude(self.sliCQ(audio)).unsqueeze(-3)
+
+        # Encode features into latent vectors
+        latents, embeddings, losses = self.encoder(coefficients)
+
+        return latents, embeddings, losses
+
+    def decode(self, latents, embeddings=None, transcribe=False):
+        """
+        Decode a batch of latent codes into logits representing real/imaginary coefficients.
+
+        Parameters
+        ----------
+        latents : Tensor (B x D_lat x T)
+          Batch of latent codes
+        embeddings : list of [Tensor (B x C x H x T)] or None (no skip connections)
+          Embeddings produced by encoder at each level
+        transcribe : bool
+          Switch for performing transcription vs. reconstruction
+
+        Returns
+        ----------
+        coefficients : Tensor (B x 2 x F X T)
+          Batch of output logits [-∞, ∞]
+        """
+
+        # Perform standard decoding steps
+        coefficients = super().decode(latents, embeddings, transcribe)
+
+        # Make sure coefficients are non-negative
+        coefficients = torch.nn.functional.relu(coefficients, inplace=True)
+
+        return coefficients
+
+    def to_activations(self, coefficients):
+        """
+        Obtain activations for a batch of transcription coefficients.
+
+        Parameters
+        ----------
+        coefficients : Tensor (B x 1 x F X T)
+          Batch of transcription magnitude coefficients
+
+        Returns
+        ----------
+        activations : Tensor (B x F X T)
+          Batch of multi-pitch activations [0, 1]
+        """
+
+        # Remove channel dimension and convert logits to activations
+        activations = torch.nn.functional.tanh(coefficients.squeeze(-3))
+
+        return activations
+
+
+class TimbreTrapMagDB(TimbreTrapMag):
+    """
+    Magnitude-CQT (decibels) variant of autoencoder.
+    """
+
+    def encode(self, audio):
+        """
+        Encode a batch of raw audio into latent codes.
+
+        Parameters
+        ----------
+        audio : Tensor (B x 1 x T)
+          Batch of input raw audio
+
+        Returns
+        ----------
+        latents : Tensor (B x D_lat x T)
+          Batch of latent codes
+        embeddings : list of [Tensor (B x C x H x T)]
+          Embeddings produced by encoder at each level
+        losses : dict containing
+          ...
+        """
+
+        # Compute CQT spectral features and convert to magnitude
+        coefficients = self.sliCQ.to_magnitude(self.sliCQ(audio))
+
+        # Convert magnitude to scaled decibels
+        coefficients = self.sliCQ.to_decibels(coefficients).unsqueeze(-3)
+
+        # Encode features into latent vectors
+        latents, embeddings, losses = self.encoder(coefficients)
+
+        return latents, embeddings, losses
+
+    def decode(self, latents, embeddings=None, transcribe=False):
+        """
+        Decode a batch of latent codes into logits representing real/imaginary coefficients.
+
+        Parameters
+        ----------
+        latents : Tensor (B x D_lat x T)
+          Batch of latent codes
+        embeddings : list of [Tensor (B x C x H x T)] or None (no skip connections)
+          Embeddings produced by encoder at each level
+        transcribe : bool
+          Switch for performing transcription vs. reconstruction
+
+        Returns
+        ----------
+        coefficients : Tensor (B x 2 x F X T)
+          Batch of output logits [-∞, ∞]
+        """
+
+        # Perform standard decoding steps
+        coefficients = TimbreTrap.decode(self, latents, embeddings, transcribe)
+
+        # Make sure coefficients are non-negative
+        coefficients = torch.nn.functional.sigmoid(coefficients)
+
+        return coefficients
+
+    def to_activations(self, coefficients):
+        """
+        Obtain activations for a batch of transcription coefficients.
+
+        Parameters
+        ----------
+        coefficients : Tensor (B x 1 x F X T)
+          Batch of transcription magnitude coefficients
+
+        Returns
+        ----------
+        activations : Tensor (B x F X T)
+          Batch of multi-pitch activations [0, 1]
+        """
+
+        # Simply remove channel dimension
+        activations = coefficients.squeeze(-3)
+
+        return activations
