@@ -1,5 +1,6 @@
-from .. import BaseDataset, stream_url_resource, unzip_and_remove, change_base_dir
+from timbre_trap.utils.data import *
 from ..Common import MedleyDB
+from .. import BaseDataset
 from . import MedleyDB_Pitch
 
 import shutil

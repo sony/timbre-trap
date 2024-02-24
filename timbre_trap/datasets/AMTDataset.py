@@ -1,4 +1,5 @@
-from . import MPEDataset, NoteDataset, constants
+from timbre_trap.utils.data import constants
+from . import MPEDataset, NoteDataset
 
 from abc import abstractmethod
 

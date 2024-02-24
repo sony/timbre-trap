@@ -21,7 +21,7 @@ import math
 import os
 
 
-EX_NAME = '_'.join(['Base_Demo'])
+EX_NAME = '_'.join(['Base'])
 
 ex = Experiment('Train a model to reconstruct and transcribe audio')
 
@@ -85,7 +85,7 @@ def config():
     gpu_ids = [0]
 
     # Random seed for this experiment
-    seed = 0
+    seed = 2
 
     ########################
     ## FEATURE EXTRACTION ##
@@ -202,7 +202,7 @@ def train_model(checkpoint_path, max_epochs, checkpoint_interval, batch_size, n_
                                       cqt=model.sliCQ,
                                       n_secs=n_secs,
                                       seed=seed)
-        mpe_train.append(urmp_stems_train)
+        #mpe_train.append(urmp_stems_train)
 
         # Instantiate URMP dataset mixtures for training
         urmp_mixes_train = URMP_Mixtures(base_dir=urmp_base_dir,
@@ -213,15 +213,6 @@ def train_model(checkpoint_path, max_epochs, checkpoint_interval, batch_size, n_
                                          seed=seed)
         mpe_train.append(urmp_mixes_train)
 
-        # Instantiate MedleyDB-Pitch subset for training
-        mydb_ptch_train = MedleyDB_Pitch(base_dir=mydb_ptch_base_dir,
-                                         splits=None,
-                                         sample_rate=sample_rate,
-                                         cqt=model.sliCQ,
-                                         n_secs=n_secs,
-                                         seed=seed)
-        mpe_train.append(mydb_ptch_train)
-
         # Instantiate GuitarSet dataset for training
         gset_train = GuitarSet(base_dir=gset_base_dir,
                                splits=['00', '01', '02', '03', '04'],
@@ -229,7 +220,41 @@ def train_model(checkpoint_path, max_epochs, checkpoint_interval, batch_size, n_
                                cqt=model.sliCQ,
                                n_secs=n_secs,
                                seed=seed)
-        mpe_train.append(gset_train)
+        #audio_train.append(gset_train)
+        #mpe_train.append(gset_train)
+
+        # Instantiate MedleyDB-Pitch subset for training
+        mydb_ptch_train = MedleyDB_Pitch(base_dir=mydb_ptch_base_dir,
+                                         splits=None,
+                                         sample_rate=sample_rate,
+                                         cqt=model.sliCQ,
+                                         n_secs=n_secs,
+                                         seed=seed)
+        #mpe_train.append(mydb_ptch_train)
+
+        # Instantiate MedleyDB (audio-only) stems for training
+        mydb_stems_train = MedleyDB_Stems(base_dir=mydb_base_dir,
+                                          splits=None,
+                                          sample_rate=sample_rate,
+                                          n_secs=n_secs,
+                                          seed=seed)
+        #audio_train.append(mydb_stems_train)
+
+        # Instantiate MedleyDB (audio-only) mixtures for training
+        mydb_mixes_train = MedleyDB_Mixtures(base_dir=mydb_base_dir,
+                                             splits=None,
+                                             sample_rate=sample_rate,
+                                             n_secs=n_secs,
+                                             seed=seed)
+        #audio_train.append(mydb_mixes_train)
+
+        # Instantiate FMA dataset (audio-only) for training
+        fma_train = FMA(base_dir=fma_base_dir,
+                        splits=None,
+                        sample_rate=sample_rate,
+                        n_secs=n_secs,
+                        seed=seed)
+        #audio_train.append(fma_train)
 
     # Combine MPE and audio datasets
     mpe_train = ComboDataset(mpe_train)

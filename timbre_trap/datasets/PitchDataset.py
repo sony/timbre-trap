@@ -1,5 +1,6 @@
 from timbre_trap.utils.processing import threshold, filter_non_peaks
-from . import BaseDataset, constants
+from timbre_trap.utils.data import constants
+from . import BaseDataset
 
 from abc import abstractmethod
 

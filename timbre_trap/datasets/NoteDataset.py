@@ -1,4 +1,5 @@
-from . import PitchDataset, constants
+from timbre_trap.utils.data import constants
+from . import PitchDataset
 
 from abc import abstractmethod
 
