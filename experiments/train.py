@@ -1,18 +1,9 @@
-<<<<<<< HEAD:train.py
-from datasets.SoloMultiPitch import URMP as URMP_Stems, Bach10 as Bach10_Stems, MedleyDB_Pitch, MAESTRO, GuitarSet
-from datasets.MixedMultiPitch import URMP as URMP_Mixtures, Bach10 as Bach10_Mixtures, Su, MusicNet, TRIOS
-from datasets.AudioStems import MedleyDB as MedleyDB_Stems
-from datasets.AudioMixtures import MedleyDB as MedleyDB_Mixtures, FMA
-from datasets import ComboDataset, constants
-from models import DataParallel, Transcriber, TranscriberMag, TranscriberMagDB
-=======
 from timbre_trap.datasets.MixedMultiPitch import URMP as URMP_Mixtures, Bach10 as Bach10_Mixtures, Su, TRIOS
 from timbre_trap.datasets.SoloMultiPitch import URMP as URMP_Stems, MedleyDB_Pitch, GuitarSet
 from timbre_trap.datasets.AudioStems import MedleyDB as MedleyDB_Stems
 from timbre_trap.datasets.AudioMixtures import MedleyDB as MedleyDB_Mixtures, FMA
 from timbre_trap.datasets import ComboDataset
-from timbre_trap.framework import TimbreTrap
->>>>>>> main:experiments/train.py
+from timbre_trap.framework import *
 
 from timbre_trap.framework.objectives import *
 from timbre_trap.utils import *
