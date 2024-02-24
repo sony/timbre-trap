@@ -1,15 +1,6 @@
-<<<<<<< HEAD:evaluate.py
-from datasets import NoteDataset, constants
-from datasets.utils import threshold
-from models.utils import filter_non_peaks
-from models import TranscriberMag, TranscriberMagDB
-from models.objectives import *
-from utils import *
-=======
 from timbre_trap.datasets import NoteDataset
-from timbre_trap.framework.objectives import *
+from timbre_trap.framework import *
 from timbre_trap.utils import *
->>>>>>> main:experiments/evaluate.py
 
 from torchmetrics.audio import SignalDistortionRatio
 
@@ -64,21 +55,16 @@ def evaluate(model, eval_set, multipliers, writer=None, i=0, device='cpu'):
             reconstruction, latents, transcription_coeffs, \
             transcription_rec, transcription_scr, losses = model(audio, multipliers['consistency'])
 
-<<<<<<< HEAD:evaluate.py
-            if not isinstance(model, TranscriberMag):
+            if not isinstance(model, TimbreTrapMag):
                 # Compute magnitude of decoded coefficients
                 transcription = model.sliCQ.to_magnitude(transcription)
             else:
                 # Remove channel dimension from magnitude
                 transcription = transcription.squeeze(-3)
 
-            if not isinstance(model, TranscriberMagDB):
+            if not isinstance(model, TimbreTrapMagDB):
                 # Convert magnitude coefficients to activations
                 transcription = torch.nn.functional.tanh(transcription)
-=======
-            # Extract magnitude of decoded coefficients and convert to activations
-            transcription = torch.nn.functional.tanh(model.sliCQ.to_magnitude(transcription_coeffs))
->>>>>>> main:experiments/evaluate.py
 
             # Determine the times associated with predictions
             times_est = model.sliCQ.get_times(model.sliCQ.get_expected_frames(audio.size(-1)))
@@ -100,7 +86,7 @@ def evaluate(model, eval_set, multipliers, writer=None, i=0, device='cpu'):
             # Store the computed results
             evaluator.append_results(results)
 
-            if not isinstance(model, TranscriberMag):
+            if not isinstance(model, TimbreTrapMag):
                 # Invert reconstructed spectral coefficients to synthesize audio
                 synth = model.sliCQ.decode(reconstruction)
 
@@ -112,19 +98,15 @@ def evaluate(model, eval_set, multipliers, writer=None, i=0, device='cpu'):
             # Obtain spectral coefficients of audio
             coefficients = model.sliCQ(audio)
 
-<<<<<<< HEAD:evaluate.py
-            if isinstance(model, TranscriberMag):
+            if isinstance(model, TimbreTrapMag):
                 # Convert coefficients to magnitude for reconstruction loss
                 coefficients = model.sliCQ.to_magnitude(coefficients).unsqueeze(-3)
 
-            if isinstance(model, TranscriberMagDB):
+            if isinstance(model, TimbreTrapMagDB):
                 # Convert magnitude to rescaled decibels
                 coefficients = model.sliCQ.to_decibels(coefficients)
 
-            # Compute the reconstruction loss for the batch
-=======
             # Compute the reconstruction loss for the track
->>>>>>> main:experiments/evaluate.py
             reconstruction_loss = compute_reconstruction_loss(reconstruction, coefficients)
 
             # Determine padding amount in terms of frames

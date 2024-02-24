@@ -409,11 +409,11 @@ def train_model(checkpoint_path, max_epochs, checkpoint_interval, batch_size, n_
             # Obtain spectral coefficients of audio
             coefficients = model.sliCQ(audio)
 
-            if isinstance(model, TranscriberMag):
+            if isinstance(model, TimbreTrapMag):
                 # Convert coefficients to magnitude for reconstruction loss
                 coefficients = model.sliCQ.to_magnitude(coefficients).unsqueeze(-3)
 
-            if isinstance(model, TranscriberMagDB):
+            if isinstance(model, TimbreTrapMagDB):
                 # Convert magnitude to rescaled decibels
                 coefficients = model.sliCQ.to_decibels(coefficients)
 
@@ -422,24 +422,19 @@ def train_model(checkpoint_path, max_epochs, checkpoint_interval, batch_size, n_
                 reconstruction, latents, transcription_coeffs, \
                 transcription_rec, transcription_scr, losses = model(audio, multipliers['consistency'])
 
-<<<<<<< HEAD:train.py
-                if not isinstance(model, TranscriberMag):
+                if not isinstance(model, TimbreTrapMag):
                     # Compute magnitude of decoded coefficients
                     transcription_ = model.sliCQ.to_magnitude(transcription_)
                 else:
                     # Remove channel dimension from magnitude
                     transcription_ = transcription_.squeeze(-3)
 
-                if not isinstance(model, TranscriberMagDB):
+                if not isinstance(model, TimbreTrapMagDB):
                     # Convert magnitude coefficients to activations
                     transcription = torch.nn.functional.tanh(transcription_)
                 else:
                     # Switch variable names
                     transcription = transcription_
-=======
-                # Extract magnitude of decoded coefficients and convert to activations
-                transcription = torch.nn.functional.tanh(model.sliCQ.to_magnitude(transcription_coeffs))
->>>>>>> main:experiments/train.py
 
                 # Compute the reconstruction loss for the batch
                 reconstruction_loss = compute_reconstruction_loss(reconstruction, coefficients)
@@ -458,17 +453,11 @@ def train_model(checkpoint_path, max_epochs, checkpoint_interval, batch_size, n_
                     # Add transcription loss to the total loss
                     total_loss += multipliers['transcription'] * transcription_loss
 
-<<<<<<< HEAD:train.py
-                    if multipliers['consistency'] and not isinstance(model, TranscriberMag):
-                        # Discard transcription spectral coefficients with no ground-truth
-                        transcription_ = transcription_[:mpe_batch_size]
-=======
-                    if multipliers['consistency']:
+                    if multipliers['consistency'] and not isinstance(model, TimbreTrapMag):
                         # Compute the consistency losses for the portion of the batch with ground-truth
                         consistency_loss_sp, consistency_loss_sc = compute_consistency_loss(transcription_rec[:mpe_batch_size],
                                                                                             transcription_scr[:mpe_batch_size],
                                                                                             transcription_coeffs[:mpe_batch_size])
->>>>>>> main:experiments/train.py
 
                         # Log the (spectral-) consistency loss for this batch
                         writer.add_scalar('train/loss/consistency/spectral', consistency_loss_sp.item(), batch_count)
