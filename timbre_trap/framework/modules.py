@@ -167,7 +167,27 @@ class TimbreTrap(nn.Module):
         # Estimate pitch using transcription switch
         coefficients = self.decode(latents, embeddings, True)
 
-        # Extract magnitude of decoded coefficients and convert to activations
+        # Convert transcription coefficients to activations
+        activations = self.to_activations(coefficients)
+
+        return activations
+
+    def to_activations(self, coefficients):
+        """
+        Obtain activations for a batch of transcription coefficients.
+
+        Parameters
+        ----------
+        coefficients : Tensor (B x 2 x F X T)
+          Batch of transcription spectral coefficients
+
+        Returns
+        ----------
+        activations : Tensor (B x F X T)
+          Batch of multi-pitch activations [0, 1]
+        """
+
+        # Extract magnitude of decoded coefficients and compress to [0, 1] range
         activations = torch.nn.functional.tanh(self.sliCQ.to_magnitude(coefficients))
 
         return activations
@@ -832,6 +852,26 @@ class TimbreTrapMag(TimbreTrap):
 
         return coefficients
 
+    def to_activations(self, coefficients):
+        """
+        Obtain activations for a batch of transcription coefficients.
+
+        Parameters
+        ----------
+        coefficients : Tensor (B x 1 x F X T)
+          Batch of transcription magnitude coefficients
+
+        Returns
+        ----------
+        activations : Tensor (B x F X T)
+          Batch of multi-pitch activations [0, 1]
+        """
+
+        # Remove channel dimension and convert logits to activations
+        activations = torch.nn.functional.tanh(coefficients.squeeze(-3))
+
+        return activations
+
 
 class TimbreTrapMagDB(TimbreTrapMag):
     """
@@ -894,3 +934,23 @@ class TimbreTrapMagDB(TimbreTrapMag):
         coefficients = torch.nn.functional.sigmoid(coefficients)
 
         return coefficients
+
+    def to_activations(self, coefficients):
+        """
+        Obtain activations for a batch of transcription coefficients.
+
+        Parameters
+        ----------
+        coefficients : Tensor (B x 1 x F X T)
+          Batch of transcription magnitude coefficients
+
+        Returns
+        ----------
+        activations : Tensor (B x F X T)
+          Batch of multi-pitch activations [0, 1]
+        """
+
+        # Simply remove channel dimension
+        activations = coefficients.squeeze(-3)
+
+        return activations

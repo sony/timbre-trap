@@ -140,10 +140,8 @@ def train_model(checkpoint_path, max_epochs, checkpoint_interval, batch_size, n_
     urmp_base_dir = None
     mydb_ptch_base_dir = None
     mydb_base_dir = None
-    mstro_base_dir = None
     bch10_base_dir = None
     su_base_dir = None
-    mnet_base_dir = None
     gset_base_dir = None
     fma_base_dir = None
     trios_base_dir = None
@@ -412,7 +410,6 @@ def train_model(checkpoint_path, max_epochs, checkpoint_interval, batch_size, n_
             if isinstance(model, TimbreTrapMag):
                 # Convert coefficients to magnitude for reconstruction loss
                 coefficients = model.sliCQ.to_magnitude(coefficients).unsqueeze(-3)
-
             if isinstance(model, TimbreTrapMagDB):
                 # Convert magnitude to rescaled decibels
                 coefficients = model.sliCQ.to_decibels(coefficients)
@@ -422,19 +419,8 @@ def train_model(checkpoint_path, max_epochs, checkpoint_interval, batch_size, n_
                 reconstruction, latents, transcription_coeffs, \
                 transcription_rec, transcription_scr, losses = model(audio, multipliers['consistency'])
 
-                if not isinstance(model, TimbreTrapMag):
-                    # Compute magnitude of decoded coefficients
-                    transcription_ = model.sliCQ.to_magnitude(transcription_)
-                else:
-                    # Remove channel dimension from magnitude
-                    transcription_ = transcription_.squeeze(-3)
-
-                if not isinstance(model, TimbreTrapMagDB):
-                    # Convert magnitude coefficients to activations
-                    transcription = torch.nn.functional.tanh(transcription_)
-                else:
-                    # Switch variable names
-                    transcription = transcription_
+                # Convert transcription coefficients to activations
+                transcription = model.to_activations(transcription_coeffs)
 
                 # Compute the reconstruction loss for the batch
                 reconstruction_loss = compute_reconstruction_loss(reconstruction, coefficients)

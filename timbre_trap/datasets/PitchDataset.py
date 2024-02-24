@@ -320,8 +320,8 @@ class PitchDataset(BaseDataset):
             # Remove non-local-peaks along frequency
             activations = filter_non_peaks(activations)
 
-        # Make sure provided activations are binarized
-        activations = threshold(filter_non_peaks(activations), t)
+        # Binarize activations using threshold
+        activations = threshold(activations, t)
 
         # Determine which frames contain pitch activity
         non_silent_frames = np.where(np.sum(activations, axis=-2) > 0)[-1]
