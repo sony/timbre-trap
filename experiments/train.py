@@ -439,7 +439,7 @@ def train_model(checkpoint_path, max_epochs, checkpoint_interval, batch_size, n_
                     # Add transcription loss to the total loss
                     total_loss += multipliers['transcription'] * transcription_loss
 
-                    if multipliers['consistency'] and not isinstance(model, TimbreTrapMag):
+                    if multipliers['consistency']:
                         # Compute the consistency losses for the portion of the batch with ground-truth
                         consistency_loss_sp, consistency_loss_sc = compute_consistency_loss(transcription_rec[:mpe_batch_size],
                                                                                             transcription_scr[:mpe_batch_size],

@@ -32,8 +32,10 @@ def evaluate(model, eval_set, multipliers, writer=None, i=0, device='cpu'):
             track = data[constants.KEY_TRACK]
             # Extract audio and add to appropriate device
             audio = data[constants.KEY_AUDIO].to(device)
-            # Extract ground-truth targets as a Tensor
-            targets = torch.Tensor(data[constants.KEY_GROUND_TRUTH])
+            # Extract ground-truth targets
+            targets = data[constants.KEY_GROUND_TRUTH]
+            # Convert to Tensor and add to appropriate device
+            targets = torch.Tensor(targets).to(device)
             # Add batch dimension
             audio = audio.unsqueeze(0)
             targets = targets.unsqueeze(0)
@@ -110,7 +112,7 @@ def evaluate(model, eval_set, multipliers, writer=None, i=0, device='cpu'):
             targets = torch.nn.functional.pad(targets, (0, n_pad_frames))
 
             # Compute the transcription loss for the track
-            transcription_loss = compute_transcription_loss(transcription, targets.to(device), True)
+            transcription_loss = compute_transcription_loss(transcription, targets, True)
 
             # Compute the total loss for the track
             total_loss = multipliers['reconstruction'] * reconstruction_loss + \
