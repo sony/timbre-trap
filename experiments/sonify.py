@@ -12,10 +12,10 @@ import os
 
 
 # Name of the model to analyze
-ex_name = 'Final_Base_V2'
+ex_name = '<EXPERIMENT_DIR>'
 
 # Choose the model checkpoint to compare
-checkpoint = 8750
+checkpoint = 0
 
 # Choose the GPU on which to perform sonification
 gpu_id = None
@@ -36,13 +36,14 @@ sample_rate = 22050
 ## MODEL ##
 ###########
 
-# Initialize a device pointer for loading the models
-device = torch.device(f'cuda:{gpu_id}' if torch.cuda.is_available() and gpu_id is not None else 'cpu')
+# Initialize the chosen device
+device = torch.device(f'cuda:{gpu_id}'
+                      if torch.cuda.is_available() else 'cpu')
 
 # Construct the path to the model checkpoint to evaluate
 model_path = os.path.join(experiment_dir, 'models', f'model-{checkpoint}.pt')
 
-# Load a checkpoint of the transcription model
+# Load a checkpoint of the Timbre-Trap model
 model = torch.load(model_path, map_location=device)
 model.eval()
 
@@ -116,9 +117,9 @@ for i, data in enumerate(tqdm(bch10_mixes)):
     save_path_scr = os.path.join(save_dir, f'{track}_Mix_scr.wav')
 
     # Write reference and reconstructed audio to specified location
-    sf.write(save_path_ref, to_array(audio_ref.squeeze()), sample_rate)
-    sf.write(save_path_rec, to_array(audio_rec.squeeze()), sample_rate)
-    sf.write(save_path_scr, to_array(audio_scr.squeeze()), sample_rate)
+    sf.write(save_path_ref, to_array(audio_ref.squeeze(0)), sample_rate)
+    sf.write(save_path_rec, to_array(audio_rec.squeeze(0)), sample_rate)
+    sf.write(save_path_scr, to_array(audio_scr.squeeze(0)), sample_rate)
 
     # Instantiate all Bach10 dataset stems belonging to mixture
     bch10_stems = Bach10_Stems(base_dir=bch10_base_dir,
@@ -166,6 +167,6 @@ for i, data in enumerate(tqdm(bch10_mixes)):
             save_path_scr = os.path.join(save_dir, f'{track}_{instrument}_scr.wav')
 
             # Write reference and reconstructed audio to specified location
-            sf.write(save_path_ref, to_array(audio_ref[k].squeeze()), sample_rate)
-            sf.write(save_path_rec, to_array(audio_rec[k].squeeze()), sample_rate)
-            sf.write(save_path_scr, to_array(audio_scr[k].squeeze()), sample_rate)
+            sf.write(save_path_ref, to_array(audio_ref[k].squeeze(0)), sample_rate)
+            sf.write(save_path_rec, to_array(audio_rec[k].squeeze(0)), sample_rate)
+            sf.write(save_path_scr, to_array(audio_scr[k].squeeze(0)), sample_rate)

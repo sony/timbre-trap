@@ -2,7 +2,6 @@ from timbre_trap.datasets.MixedMultiPitch import Bach10 as Bach10_Mixtures, Su
 from timbre_trap.datasets.SoloMultiPitch import GuitarSet
 from timbre_trap.datasets.NoteDataset import NoteDataset
 
-from evaluate import MultipitchEvaluator
 from timbre_trap.utils import *
 
 from tqdm import tqdm
@@ -42,8 +41,9 @@ sample_rate = 22050
 ## MODELS ##
 ############
 
-# Initialize a device pointer for loading the models
-device = torch.device(f'cuda:{gpu_id}' if torch.cuda.is_available() and gpu_id is not None else 'cpu')
+# Initialize the chosen device
+device = torch.device(f'cuda:{gpu_id}'
+                      if torch.cuda.is_available() else 'cpu')
 
 # Construct the path to the model checkpoint to evaluate
 model_path = os.path.join(experiment_dir, 'models', f'model-{checkpoint}.pt')
@@ -58,7 +58,7 @@ from basic_pitch import ICASSP_2022_MODEL_PATH
 from basic_pitch.inference import predict
 import tensorflow as tf
 
-# Number of bins in a single octave
+# Number of bins in an octave
 bp_bins_per_octave = 36
 # Load the BasicPitch model checkpoint corresponding to paper
 basic_pitch = tf.saved_model.load(str(ICASSP_2022_MODEL_PATH))
@@ -66,6 +66,7 @@ basic_pitch = tf.saved_model.load(str(ICASSP_2022_MODEL_PATH))
 bp_midi_freqs = librosa.note_to_midi('A0') + np.arange(264) / (bp_bins_per_octave / 12)
 
 
+# TODO - move following to function?
 # Specify the names of the files to download from GitHub
 script_name, weights_name = 'predict_on_audio.py', 'multif0.h5'
 # Construct a path to a top-level directory for DeepSalience
@@ -139,7 +140,7 @@ su_test = Su(base_dir=su_base_dir,
              sample_rate=sample_rate,
              cqt=tt_mpe.sliCQ)
 
-# Instantiate GuitarSet dataset for evaluation
+# Instantiate GuitarSet dataset (player 5) for evaluation
 gset_test = GuitarSet(base_dir=gset_base_dir,
                       splits=['05'],
                       sample_rate=sample_rate,
@@ -210,7 +211,7 @@ for eval_set in [bch10_test, su_test, gset_test]:
         times_est = eval_set.cqt.get_times(eval_set.cqt.get_expected_frames(audio.size(-1)))
         # Obtain spectral coefficients of audio
         coefficients = eval_set.cqt(audio)
-        # Obtain the magnitude of the coefficients
+        # Take the magnitude of the coefficients
         magnitude = eval_set.cqt.to_magnitude(coefficients).squeeze(0)
         # Convert magnitude to linear gain between 0 and 1
         features_lin = magnitude / magnitude.max()
@@ -251,7 +252,7 @@ for eval_set in [bch10_test, su_test, gset_test]:
 
 
         # Transcribe the audio using the Timbre-Trap model
-        tt_activations = to_array(tt_mpe.transcribe(audio).squeeze())
+        tt_activations = to_array(tt_mpe.transcribe(audio).squeeze(0))
         # Peak-pick and threshold the Timbre-Trap activations
         tt_activations = threshold(filter_non_peaks(tt_activations), 0.5)
         # Remove activations for invalid frequencies

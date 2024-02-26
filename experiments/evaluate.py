@@ -12,7 +12,7 @@ import torch
 
 
 def evaluate(model, eval_set, multipliers, writer=None, i=0, device='cpu'):
-    # Initialize a new evaluator for the dataset
+    # Initialize a clean evaluator
     evaluator = MultipitchEvaluator()
 
     # Add model to selected device and switch to evaluation mode
@@ -36,9 +36,8 @@ def evaluate(model, eval_set, multipliers, writer=None, i=0, device='cpu'):
             targets = data[constants.KEY_GROUND_TRUTH]
             # Convert to Tensor and add to appropriate device
             targets = torch.Tensor(targets).to(device)
-            # Add batch dimension
-            audio = audio.unsqueeze(0)
-            targets = targets.unsqueeze(0)
+            # Add batch dimension to audio and ground-truth
+            audio, targets = audio.unsqueeze(0), targets.unsqueeze(0)
 
             if isinstance(eval_set, NoteDataset):
                 # Extract frame times of ground-truth targets as reference
@@ -60,10 +59,10 @@ def evaluate(model, eval_set, multipliers, writer=None, i=0, device='cpu'):
             coefficients = model.sliCQ(audio)
 
             if isinstance(model, TimbreTrapMag):
-                # Convert coefficients to magnitude for reconstruction loss
+                # Take magnitude of complex coefficients for reconstruction loss
                 coefficients = model.sliCQ.to_magnitude(coefficients).unsqueeze(-3)
             if isinstance(model, TimbreTrapMagDB):
-                # Convert magnitude to rescaled decibels
+                # Convert amplitude to rescaled decibels
                 coefficients = model.sliCQ.to_decibels(coefficients)
 
             # Perform transcription and reconstruction simultaneously
@@ -88,13 +87,13 @@ def evaluate(model, eval_set, multipliers, writer=None, i=0, device='cpu'):
             # Convert the activations to frame-level multi-pitch estimates
             multi_pitch_est = eval_set.activations_to_multi_pitch(activations, model.sliCQ.midi_freqs, peaks_only=True)
 
-            # Compute results for this track using mir_eval multi-pitch metrics
+            # Compute results for the track using mir_eval multi-pitch metrics
             results = evaluator.evaluate(times_est, multi_pitch_est, times_ref, multi_pitch_ref)
             # Store the computed results
             evaluator.append_results(results)
 
             if not isinstance(model, TimbreTrapMag):
-                # Invert reconstructed spectral coefficients to synthesize audio
+                # Synthesize audio from reconstructed spectral coefficients
                 synth = model.sliCQ.decode(reconstruction)
 
                 # Compute SDR w.r.t. original (padded) audio
@@ -105,7 +104,7 @@ def evaluate(model, eval_set, multipliers, writer=None, i=0, device='cpu'):
             # Compute the reconstruction loss for the track
             reconstruction_loss = compute_reconstruction_loss(reconstruction, coefficients)
 
-            # Determine padding amount in terms of frames
+            # Determine padding amount in frames
             n_pad_frames = len(times_est) - targets.size(-1)
 
             # Pad the transcription targets to match prediction size
@@ -139,18 +138,18 @@ def evaluate(model, eval_set, multipliers, writer=None, i=0, device='cpu'):
                                       'loss/transcription' : transcription_loss.item(),
                                       'loss/total' : total_loss.item()})
 
-        # Compute the average for all scores
+        # Average results over all tracks
         average_results, _ = evaluator.average_results()
 
         if writer is not None:
-            # Loop through all computed scores
+            # Loop through each metric
             for key in average_results.keys():
                 # Log the average score for this dataset
                 writer.add_scalar(f'{eval_set.name()}/{key}', average_results[key], i)
 
-            # Extract magnitude from original spectral coefficients and convert to decibels
+            # Take magnitude of original spectral coefficients and convert to decibels
             features_log = model.sliCQ.to_decibels(model.sliCQ.to_magnitude(coefficients))
-            # Extract magnitude from reconstructed spectral coefficients and convert to decibels
+            # Take magnitude of reconstructed spectral coefficients and convert to decibels
             reconstruction = model.sliCQ.to_decibels(model.sliCQ.to_magnitude(reconstruction))
 
             # Reduce time resolution for better TensorBoard visualization
