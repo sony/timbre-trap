@@ -45,7 +45,7 @@ class URMP(MPEDataset, URMP):
           Path to audio for the specified track
         """
 
-        # Get the path to the audio mixture
+        # Construct the path to the audio mixture
         wav_path = os.path.join(self.base_dir, track, f'AuMix_{track}.wav')
 
         return wav_path
@@ -67,13 +67,13 @@ class URMP(MPEDataset, URMP):
           Path to ground-truth for the specified track and instrument
         """
 
-        # Construct a path to the track directory
+        # Construct the path to the track directory
         track_dir = os.path.join(self.base_dir, track)
 
         # Identify the annotations file corresponding to the specified instrument index
         anno_file = [f for f in os.listdir(track_dir) if f.startswith(f'F0s_{instrument}')][0]
 
-        # Construct a path to annotations for the instrument
+        # Construct the path to the annotations for the instrument
         txt_path = os.path.join(track_dir, anno_file)
 
         return txt_path

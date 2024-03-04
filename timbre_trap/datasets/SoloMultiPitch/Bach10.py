@@ -55,7 +55,7 @@ class Bach10(MPEDataset, Bach10):
         # Break apart the track name
         n, mix, _ = track.split('-')
 
-        # Get the path to the audio stem
+        # Construct the path to the audio stem
         wav_path = os.path.join(self.base_dir, f'{n}-{mix}', f'{track}.wav')
 
         return wav_path
@@ -78,7 +78,7 @@ class Bach10(MPEDataset, Bach10):
         # Break apart the track name
         n, mix, _ = track.split('-')
 
-        # Get the path to the F0 annotations for whole mixture
+        # Construct the path to the F0 annotations for the whole mixture
         mat_path = os.path.join(self.base_dir, f'{n}-{mix}', f'{n}-{mix}-GTF0s.mat')
 
         return mat_path

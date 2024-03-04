@@ -73,11 +73,11 @@ class AudioDataset(BaseDataset):
             audio = torchaudio.functional.resample(audio, fs, self.sample_rate)
 
             if audio.abs().max():
-                # Normalize the audio using the infinity norm
+                # Normalize the audio using infinity norm
                 audio /= audio.abs().max()
 
         except Exception as e:
-            # Print offending track to console
+            # Print offending track and exception to console
             print(f'Error loading track \'{track}\': {repr(e)}')
 
             # Default audio to silence
@@ -101,7 +101,7 @@ class AudioDataset(BaseDataset):
         Returns
         ----------
         audio : Tensor (1 x M)
-          Audio data sliced accordingly
+          Sliced audio data
         offset_t : float
           Offset (in seconds) used to take slice
         """
@@ -112,7 +112,7 @@ class AudioDataset(BaseDataset):
 
         if audio.size(-1) >= n_samples:
             if offset_s is None:
-                # Sample a starting sample index randomly for the trim
+                # Sample a starting sample index randomly for the excerpt
                 start = self.rng.randint(0, audio.size(-1) - n_samples + 1)
             else:
                 # Use provided value
@@ -128,7 +128,7 @@ class AudioDataset(BaseDataset):
             pad_total = n_samples - audio.size(-1)
 
             if offset_s is None:
-                # Randomly distribute padding
+                # Randomly distribute padding to both sides
                 pad_left = self.rng.randint(0, pad_total)
             else:
                 # Use provided value
@@ -137,7 +137,7 @@ class AudioDataset(BaseDataset):
             # Determine corresponding time offset
             offset_t = -pad_left / self.sample_rate
 
-            # Pad the audio with zeros on both sides by sampled amount
+            # Pad the audio with zeros on both sides according to offset
             audio = torch.nn.functional.pad(audio, (pad_left, pad_total - pad_left))
 
         return audio, offset_t
@@ -166,7 +166,7 @@ class AudioDataset(BaseDataset):
         # Determine corresponding track
         track = self.tracks[index]
 
-        # Load the track's audio
+        # Load sampled track's audio
         audio = self.get_audio(track)
 
         if self.n_secs is not None:

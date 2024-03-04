@@ -91,7 +91,7 @@ class PitchDataset(BaseDataset):
         Returns
         ----------
         times : ndarray (M)
-          Frame times sliced accordingly
+          Sliced frame times
         offset_n : float
           Offset (in frames) used to take slice
         """
@@ -104,7 +104,7 @@ class PitchDataset(BaseDataset):
 
         if len(times) >= n_frames:
             if offset_t is None:
-                # Sample a starting frame index randomly for the trim
+                # Sample a starting frame index randomly for the excerpt
                 start = self.rng.randint(0, times.size - n_frames + 1)
                 # Track frame offset
                 offset_n = start
@@ -120,7 +120,7 @@ class PitchDataset(BaseDataset):
             pad_total = n_frames - len(times)
 
             if offset_t is None:
-                # Randomly distribute padding
+                # Randomly distribute padding to both sides
                 pad_left = self.rng.randint(0, pad_total)
             else:
                 # Infer padding distribution from provided offset
@@ -177,7 +177,7 @@ class PitchDataset(BaseDataset):
             # Randomly slice times using default sequence length
             times, _ = self.slice_times(times, offset_t=offset_t)
 
-        # Obtain ground-truth resampled to computed times
+        # Obtain ground-truth resampled to sliced times
         multi_pitch = self.resample_multi_pitch(_times, _pitches, times)
 
         # Convert pitch annotations to multi pitch activations
@@ -254,16 +254,16 @@ class PitchDataset(BaseDataset):
                                                    bounds_error=True,
                                                    assume_sorted=True)
 
-        # Construct an empty array of appropriate size by default
+        # Construct an empty array of appropriate size
         activations = np.zeros((len(midi_freqs), len(multi_pitch)))
 
-        # Make sure zeros are filtered out and convert to MIDI
+        # Make sure zeros are filtered out and convert pitches to MIDI
         multi_pitch = [librosa.hz_to_midi(p[p != 0]) for p in multi_pitch]
 
         # Count the number of nonzero pitch annotations
         num_nonzero = sum([sum(a != 0) for a in multi_pitch])
 
-        # Determine the lower and upper pitch boundaries
+        # Determine lower and upper pitch boundaries
         lb, ub = np.min(midi_freqs), np.max(midi_freqs)
 
         # Filter out any out-of-bounds pitches from the annotations
@@ -273,7 +273,7 @@ class PitchDataset(BaseDataset):
         num_valid = sum([sum(a != 0) for a in multi_pitch])
 
         if num_valid != num_nonzero:
-            # Print a warning message indicating degraded ground-truth
+            # Print a warning message indicating incomplete ground-truth
             warnings.warn('Could not fully represent ground-truth with '
                           'available frequency bins.', RuntimeWarning)
 
@@ -286,7 +286,7 @@ class PitchDataset(BaseDataset):
             multi_pitch_idcs = np.concatenate([res_func_freq(multi_pitch[i])
                                                for i in sorted(set(frame_idcs))])
 
-            # Insert pitch activity into the ground-truth
+            # Insert pitch activity into the ground-truth array
             activations[multi_pitch_idcs.astype('uint'), frame_idcs] = 1
 
         return activations
@@ -326,9 +326,9 @@ class PitchDataset(BaseDataset):
         # Determine which frames contain pitch activity
         non_silent_frames = np.where(np.sum(activations, axis=-2) > 0)[-1]
 
-        # Loop through these frames
+        # Loop through non-silent frames
         for i in list(non_silent_frames):
-            # Determine the active pitches within the frame and insert into the list
+            # Determine the active pitches within frame and insert into multi-pitch list
             multi_pitch[i] = librosa.midi_to_hz(midi_freqs[np.where(activations[..., i])[-1]])
 
         return multi_pitch

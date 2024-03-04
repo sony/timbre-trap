@@ -1,3 +1,4 @@
+from timbre_trap.utils.data import constants
 from .. import AudioDataset
 
 import yaml
@@ -14,8 +15,21 @@ class MedleyDB(AudioDataset):
         Add a field to store metadata for all available multitracks.
         """
 
-        # Initialize dictionary for all metadata
-        self.metadata = None
+        # Determine if base directory was provided
+        base_dir = kwargs.pop('base_dir', None)
+
+        if base_dir is None:
+            # Assume the dataset exists at the default location
+            base_dir = os.path.join(constants.DEFAULT_LOCATION, self.name())
+
+        self.base_dir = base_dir
+
+        # Update the value within the keyword arguments
+        kwargs.update({'base_dir' : self.base_dir})
+
+        # Create dictionary for all metadata
+        self.metadata = dict()
+        self.load_metadata()
 
         AudioDataset.__init__(self, **kwargs)
 
@@ -24,11 +38,8 @@ class MedleyDB(AudioDataset):
         Load and process all metadata.
         """
 
-        # Initialize dictionary for all metadata
-        self.metadata = dict()
-
         for multitrack in self.available_multitracks():
-            # Construct a path to the YAML-encoded metadata
+            # Construct the path to the YAML-encoded metadata
             yaml_path = os.path.join(self.base_dir, 'Metadata', f'{multitrack}_METADATA.yaml')
 
             with open(yaml_path, 'r') as file:
@@ -45,7 +56,7 @@ class MedleyDB(AudioDataset):
           List containing song (multitrack) names
         """
 
-        # Construct a path to the directory containing audio
+        # Construct the path to the directory containing audio
         audio_dir = os.path.join(self.base_dir, 'Audio')
 
         # Obtain a list of all multitracks for which audio is available

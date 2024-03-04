@@ -20,9 +20,9 @@ def initialize_figure(figsize=(9, 3), interactive=False):
     Parameters
     ----------
     figsize : tuple (x, y) or None (Optional)
-      Size of plot window in inches - if unspecified set to default
+      Size of plot window in inches
     interactive : bool
-      Whether to set turn on matplotlib interactive mode
+      Whether to turn on matplotlib interactive mode
 
     Returns
     ----------
@@ -31,14 +31,14 @@ def initialize_figure(figsize=(9, 3), interactive=False):
     """
 
     if interactive and not plt.isinteractive():
-        # Make sure pyplot is in interactive mode
+        # Set pyplot to interactive mode
         plt.ion()
 
     # Create a new figure with the specified size
     fig = plt.figure(figsize=figsize, tight_layout=True)
 
     if not interactive:
-        # Open the figure manually if interactive mode is off
+        # Open figure manually
         plt.show(block=False)
 
     return fig
@@ -55,7 +55,7 @@ def plot_magnitude(magnitude, extent=None, colorbar=False, fig=None, save_path=N
       F - number of frequency bins
       T - number of frames
     extent : list [l, r, b, t] or None (Optional)
-      Boundaries of horizontal and vertical axis
+      Boundaries of time and frequency axis
     colorbar : bool
       Whether to include a colorbar for reference
     fig : matplotlib Figure object
@@ -78,10 +78,9 @@ def plot_magnitude(magnitude, extent=None, colorbar=False, fig=None, save_path=N
 
     if extent is not None:
         # Swap position of bottom and top
-        extent = [extent[0], extent[1],
-                  extent[3], extent[2]]
+        extent = [extent[0], extent[1], extent[3], extent[2]]
 
-    # Plot magnitude as an image
+    # Display magnitude as an image heatmap
     img = ax.imshow(magnitude, vmin=0, vmax=1, extent=extent)
     # Flip y-axis for ascending pitch
     ax.invert_yaxis()
@@ -97,11 +96,11 @@ def plot_magnitude(magnitude, extent=None, colorbar=False, fig=None, save_path=N
         ax.axis('off')
 
     if colorbar:
-        # Add a legend to image
+        # Include colorbar
         fig.colorbar(img)
 
     if save_path is not None:
-        # Save the figure
+        # Save figure to the specified path
         fig.savefig(save_path, bbox_inches='tight', pad_inches=0)
 
     return fig
@@ -117,12 +116,12 @@ def plot_latents(latents, labels, seed=0, fig=None, save_path=None):
       Collection of latent codes to visualize
     labels : list [*] * L
       Corresponding labels for the latent codes
+    seed : int
+      Seed for reproducibility
     fig : matplotlib Figure object
       Preexisting figure to use for plotting
     save_path : string or None (Optional)
       Save the figure to this path
-    seed : int
-      Seed for reproducibility
 
     Returns
     ----------
@@ -153,7 +152,7 @@ def plot_latents(latents, labels, seed=0, fig=None, save_path=None):
         # Plot all 2D latents for the label
         ax.scatter(latents_2d[idcs, 0], latents_2d[idcs, 1], label=l, s=40)
 
-    # Add a legend for the latent labels to the figure
+    # Include legend for the latent labels
     ax.legend()
 
     # Move left y-axis and bottom x-axis to center
@@ -180,7 +179,7 @@ def plot_latents(latents, labels, seed=0, fig=None, save_path=None):
     fig.suptitle('t-SNE Visualization of Latents Averaged Over Stems')
 
     if save_path is not None:
-        # Save the figure
+        # Save figure to the specified path
         fig.savefig(save_path, bbox_inches='tight', pad_inches=0)
 
     return fig

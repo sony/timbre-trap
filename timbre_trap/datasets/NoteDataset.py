@@ -117,7 +117,7 @@ class NoteDataset(PitchDataset):
         for p, (j, k) in zip(pitches, intervals):
             # Loop through time indices corresponding to note activity
             for i in np.where((times >= j) & (times < k))[0]:
-                # Add a pitch observation during the frame
+                # Insert pitch observation into the frame entry
                 multi_pitch[i] = np.append(multi_pitch[i], p)
 
         return multi_pitch

@@ -45,7 +45,7 @@ class TRIOS(TRIOS):
           Path to audio for the specified track
         """
 
-        # Get the path to the multitrack audio
+        # Construct the path to the multitrack audio
         wav_path = os.path.join(self.base_dir, track, 'mix.wav')
 
         return wav_path
@@ -67,7 +67,7 @@ class TRIOS(TRIOS):
           Path to ground-truth for the specified track and instrument
         """
 
-        # Get the path to the note annotations for the instrument
+        # Construct the path to the note annotations for the instrument
         midi_path = os.path.join(self.base_dir, track, f'{instrument}.mid')
 
         return midi_path

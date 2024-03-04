@@ -38,10 +38,6 @@ class MedleyDB(MedleyDB):
           List containing the songs of the specified genre
         """
 
-        if self.metadata is None:
-            # Load metadata only once
-            self.load_metadata()
-
         # Initialize a list to hold valid tracks
         tracks = list()
 
@@ -68,7 +64,7 @@ class MedleyDB(MedleyDB):
           Path to audio for the specified track
         """
 
-        # Get the path to the audio mixture
+        # Construct the path to the audio mixture
         wav_path = os.path.join(self.base_dir, 'Audio', track, f'{track}_MIX.wav')
 
         return wav_path
