@@ -28,7 +28,7 @@ class MedleyDB(AudioDataset):
         kwargs.update({'base_dir' : self.base_dir})
 
         # Create dictionary for all metadata
-        self.metadata = dict()
+        self.metadata = None
         self.load_metadata()
 
         AudioDataset.__init__(self, **kwargs)
@@ -37,6 +37,9 @@ class MedleyDB(AudioDataset):
         """
         Load and process all metadata.
         """
+
+        # Initialize a dictionary to hold metadata
+        self.metadata = dict()
 
         for multitrack in self.available_multitracks():
             # Construct the path to the YAML-encoded metadata

@@ -154,8 +154,6 @@ class BaseDataset(Dataset):
         # Create the base directory
         os.makedirs(save_dir)
 
-        print(f'Downloading {cls.__name__}...')
-
 
 class ComboDataset(Dataset):
     """

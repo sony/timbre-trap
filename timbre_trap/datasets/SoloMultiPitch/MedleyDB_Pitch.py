@@ -36,7 +36,7 @@ class MedleyDB_Pitch(MPEDataset, MedleyDB):
         kwargs.update({'base_dir' : self.base_dir})
 
         # Create dictionary for all metadata
-        self.metadata = dict()
+        self.metadata = None
         self.load_metadata()
 
         MPEDataset.__init__(self, **kwargs)
