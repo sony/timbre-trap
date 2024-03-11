@@ -407,10 +407,12 @@ def train_model(checkpoint_path, max_epochs, checkpoint_interval, batch_size, n_
             # Obtain spectral coefficients
             coefficients = model.sliCQ(audio)
 
-            if isinstance(model, TimbreTrapMag):
+            if isinstance(model, TimbreTrapMag) or \
+                len(gpu_ids) > 1 and isinstance(model.module, TimbreTrapMag):
                 # Take magnitude of complex coefficients for reconstruction loss
                 coefficients = model.sliCQ.to_magnitude(coefficients).unsqueeze(-3)
-            if isinstance(model, TimbreTrapMagDB):
+            if isinstance(model, TimbreTrapMagDB) or \
+                len(gpu_ids) > 1 and isinstance(model.module, TimbreTrapMagDB):
                 # Convert amplitude to rescaled decibels
                 coefficients = model.sliCQ.to_decibels(coefficients)
 

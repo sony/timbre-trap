@@ -15,6 +15,10 @@ def evaluate(model, eval_set, multipliers, writer=None, i=0, device='cpu'):
     # Initialize a clean evaluator
     evaluator = MultipitchEvaluator()
 
+    if isinstance(model, torch.nn.DataParallel):
+        # Use the wrapped model
+        model = model.module
+
     # Add model to selected device and switch to evaluation mode
     model = model.to(device)
     model.eval()
