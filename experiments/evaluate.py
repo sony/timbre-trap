@@ -12,15 +12,36 @@ import torch
 
 
 def evaluate(model, eval_set, multipliers, writer=None, i=0, device='cpu'):
+    """
+    Evaluate a model on a given dataset.
+
+    Parameters
+    ----------
+    model : TimbreTrap
+      Model checkpoint to evaluate
+    eval_set : MPEDataset or AMTDataset
+      Dataset with audio and ground-truth
+    multipliers : list of float
+      Scaling factor for each loss term
+    writer : TensorboardWriter
+      Tensorboard writer to use for logging
+    i : int
+      Checkpoint number to use for logging
+    device : int or torch.device
+      Device to use for evaluation
+
+    Returns
+    ----------
+    average_Results : dict of {string : float}
+      Average results across the dataset for each metric
+    """
+
     # Initialize a clean evaluator
     evaluator = MultipitchEvaluator()
 
-    if isinstance(model, torch.nn.DataParallel):
-        # Use the wrapped model
-        model = model.module
-
-    # Add model to selected device and switch to evaluation mode
+    # Add model to selected device
     model = model.to(device)
+    # Switch to evaluation mode
     model.eval()
 
     # Determine valid frequency bins for multi-pitch estimation (based on mir_eval)

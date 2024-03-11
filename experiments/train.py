@@ -504,11 +504,11 @@ def train_model(checkpoint_path, max_epochs, checkpoint_interval, batch_size, n_
                 model_path = os.path.join(log_dir, f'model-{batch_count}.pt')
 
                 if isinstance(model, torch.nn.DataParallel):
-                    # Unwrap and save the model
-                    torch.save(model.module, model_path)
-                else:
-                    # Save the model as is
-                    torch.save(model, model_path)
+                    # Unwrap the model
+                    model = model.module
+
+                # Save the current model weights
+                torch.save(model, model_path)
 
                 # Initialize dictionary to hold all validation results
                 validation_results = dict()
@@ -522,8 +522,13 @@ def train_model(checkpoint_path, max_epochs, checkpoint_interval, batch_size, n_
                                                                   i=batch_count,
                                                                   device=device)
 
-                # Make sure model is on correct device and switch to training mode
+                if len(gpu_ids) > 1:
+                    # Re-wrap model for multi-GPU usage
+                    model = DataParallel(model, device_ids=gpu_ids)
+
+                # Add model to original device
                 model = model.to(device)
+                # Switch to training mode
                 model.train()
 
                 if decay_scheduler.patience and not warmup_scheduler.is_active() and i >= n_epochs_late_start:
