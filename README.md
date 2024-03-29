@@ -3,7 +3,7 @@ Code for the paper "[Timbre-Trap: A Low-Resource Framework for Instrument-Agnost
 This repository contains the following (and more):
 - Full Timbre-Trap framework
   - [NSGT-based invertible Constant-Q Transform (CQT)](https://github.com/archinetai/cqt-pytorch) wrapper
-  - 2D autoencoder inspired by the [SoundStream](https://ieeexplore.ieee.org/abstract/document/9625818) architecture
+  - 2D autoencoder inspired by the [SoundStream](https://arxiv.org/abs/2107.03312) architecture
   - Transcription, reconstruction, and consistency objectives
 - Intuitive Multi-Pitch Estimation (MPE) and Automatic Music Transcription (AMT) dataset wrappers
 - Training and evaluation scripts sufficient to reproduce experiments
@@ -25,10 +25,10 @@ Note that these are organized by data type, i.e. multi-instrument audio mixtures
 Some datasets have wrappers for both mixtures and stems.
 The wrappers also differentiate between frame-level pitch (MPE) and note-level (AMT) annotations, depending on what is available for each dataset.
 
-
 The following is an example of how to use a dataset wrapper:
 ```
 from timbre_trap.datasets.MixedMultiPitch import URMP
+from timbre_trap.utils import constants
 
 urmp_data = URMP(base_dir=None,
                  splits=None,
@@ -44,8 +44,8 @@ for track in urmp_data:
     times, multipitch = urmp_data.get_ground_truth(name)
 ```
 
-By default, the wrapper will search for the top-level dataset directory at ```~/Desktop/Datasets/<DATASET>```.
-However, the path can be specified using the ```base_dir``` keyword argument.
+By default, the wrapper will look for the top-level dataset directory at ```~/Desktop/Datasets/<DATASET>```.
+However, this path can be specified using the ```base_dir``` keyword argument.
 If the dataset does not exist, it will be downloaded automatically (except for in cases where this is not possible).
 
 The ```splits``` keyword can be used to partition the data based on pre-defined attributes or metadata.
@@ -114,10 +114,10 @@ Execution of ```experiments/train.py``` will generate the following under ```<ro
 - ```n/``` - folder (beginning at ```n = 1```)<sup>1</sup> containing [sacred](https://sacred.readthedocs.io/en/stable/quickstart.html) experiment files:
   - ```config.json``` - parameter values used for the experiment
   - ```cout.txt``` - contains any text printed to console
-  - ```metrics.json``` - validation and evaluation results for the best model checkpoints
+  - ```metrics.json``` - validation and evaluation results for the best model checkpoint
   - ```run.json``` - system and experiment information
 - ```models/``` - folder containing saved model weights at each checkpoint, as well as an events file (for each execution) readable by [tensorboard](https://www.tensorflow.org/tensorboard)
-- ```_sources/``` - folder containing copies of scripts at the time(s) execution
+- ```_sources/``` - folder containing copies of scripts at the time(s) of execution
 
 <sup>1</sup>An additional folder (```n += 1```) containing similar files is created for each execution with the same experiment name ```<EX_NAME>```.
 
