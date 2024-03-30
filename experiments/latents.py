@@ -39,8 +39,8 @@ sample_rate = 22050
 ###########
 
 # Initialize the chosen device
-device = torch.device(f'cuda:{gpu_id}'
-                      if torch.cuda.is_available() else 'cpu')
+device = torch.device(f'cuda:{gpu_id}' if gpu_id is not None
+                      and torch.cuda.is_available() else 'cpu')
 
 # Construct the path to the model checkpoint to evaluate
 model_path = os.path.join(experiment_dir, 'models', f'model-{checkpoint}.pt')

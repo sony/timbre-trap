@@ -42,8 +42,8 @@ sample_rate = 22050
 ############
 
 # Initialize the chosen device
-device = torch.device(f'cuda:{gpu_id}'
-                      if torch.cuda.is_available() else 'cpu')
+device = torch.device(f'cuda:{gpu_id}' if gpu_id is not None
+                      and torch.cuda.is_available() else 'cpu')
 
 # Construct the path to the model checkpoint to evaluate
 model_path = os.path.join(experiment_dir, 'models', f'model-{checkpoint}.pt')
@@ -212,11 +212,11 @@ for eval_set in [bch10_test, su_test, gset_test]:
         # Obtain spectral coefficients of audio
         coefficients = eval_set.cqt(audio)
         # Take the magnitude of the coefficients
-        magnitude = eval_set.cqt.to_magnitude(coefficients).squeeze(0)
+        magnitude = eval_set.cqt.to_magnitude(coefficients)
         # Convert magnitude to linear gain between 0 and 1
-        features_lin = magnitude / magnitude.max()
+        features_lin = magnitude.squeeze(0) / magnitude.max()
         # Obtain spectral features in decibels
-        features_log = eval_set.cqt.to_decibels(magnitude)
+        features_log = eval_set.cqt.to_decibels(magnitude).squeeze(0)
 
 
         # Peak-pick and threshold the linear-scaled magnitude
