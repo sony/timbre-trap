@@ -64,7 +64,7 @@ class Su(AMTDataset):
           Path to audio for the specified track
         """
 
-        # Get the path to the audio mixture
+        # Construct the path to the audio mixture
         wav_path = os.path.join(self.base_dir, 'audio', f'{track}_audio.wav')
 
         return wav_path
@@ -84,7 +84,7 @@ class Su(AMTDataset):
           Path to ground-truth for the specified track
         """
 
-        # Get the path to the note annotations for track
+        # Construct the path to the note annotations for the track
         txt_path = os.path.join(self.base_dir, 'gt_Note', f'{track}_note.txt')
 
         return txt_path

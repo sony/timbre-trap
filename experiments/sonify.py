@@ -12,10 +12,10 @@ import os
 
 
 # Name of the model to analyze
-ex_name = 'Final_Base_V2'
+ex_name = '<EXPERIMENT_DIR>'
 
 # Choose the model checkpoint to compare
-checkpoint = 8750
+checkpoint = 0
 
 # Choose the GPU on which to perform sonification
 gpu_id = None
@@ -36,13 +36,14 @@ sample_rate = 22050
 ## MODEL ##
 ###########
 
-# Initialize a device pointer for loading the models
-device = torch.device(f'cuda:{gpu_id}' if torch.cuda.is_available() and gpu_id is not None else 'cpu')
+# Initialize the chosen device
+device = torch.device(f'cuda:{gpu_id}' if gpu_id is not None
+                      and torch.cuda.is_available() else 'cpu')
 
 # Construct the path to the model checkpoint to evaluate
 model_path = os.path.join(experiment_dir, 'models', f'model-{checkpoint}.pt')
 
-# Load a checkpoint of the transcription model
+# Load a checkpoint of the Timbre-Trap model
 model = torch.load(model_path, map_location=device)
 model.eval()
 

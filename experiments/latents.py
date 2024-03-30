@@ -10,11 +10,11 @@ import torch
 import os
 
 
-# Name of the model to evaluate
-ex_name = 'Final_Base_V2'
+# Name of the model to probe
+ex_name = '<EXPERIMENT_DIR>'
 
 # Choose the model checkpoint to compare
-checkpoint = 8750
+checkpoint = 0
 
 # Choose the GPU on which to perform evaluation
 gpu_id = None
@@ -38,13 +38,14 @@ sample_rate = 22050
 ## MODEL ##
 ###########
 
-# Initialize a device pointer for loading the models
-device = torch.device(f'cuda:{gpu_id}' if torch.cuda.is_available() and gpu_id is not None else 'cpu')
+# Initialize the chosen device
+device = torch.device(f'cuda:{gpu_id}' if gpu_id is not None
+                      and torch.cuda.is_available() else 'cpu')
 
 # Construct the path to the model checkpoint to evaluate
 model_path = os.path.join(experiment_dir, 'models', f'model-{checkpoint}.pt')
 
-# Load a checkpoint of the disentanglement model
+# Load a checkpoint of the Timbre-Trap model
 model = torch.load(model_path, map_location=device)
 model.eval()
 
@@ -81,14 +82,14 @@ os.makedirs(save_dir, exist_ok=True)
 # Seed everything with the same seed
 seed_everything(seed)
 
-# Create an empty list to hold all latents and instrument labels
+# Create empty lists to hold all latents and instrument labels
 all_latents, instruments = list(), list()
 
 # Loop through each mixture
 for i in tqdm(range(num_tracks)):
     print(f'Computing latents for stems from track \'{mixture_tracks[i]}\'...')
 
-    # Instantiate all Bach10 dataset stems belonging to a mixture
+    # Instantiate all Bach10 dataset stems belonging to mixture
     bch10_stems = Bach10_Stems(base_dir=bch10_base_dir,
                                splits=[f'{i + 1:02d}'],
                                sample_rate=sample_rate,
@@ -97,14 +98,14 @@ for i in tqdm(range(num_tracks)):
     # Initialize a PyTorch dataloader for a batch of the stems
     loader = DataLoader(dataset=bch10_stems, batch_size=num_stems, shuffle=False)
 
-    # Load a batch of stems
+    # Load stems
     for stems in loader:
         # Obtain track names
         track = stems[constants.KEY_TRACK]
         # Extract audio and add to the appropriate device
         audio = stems[constants.KEY_AUDIO].to(device)
 
-        # Add fixed set of instruments for stems
+        # Append fixed set of instrument labels
         instruments += bach10_instrument_legend
 
         with torch.no_grad():

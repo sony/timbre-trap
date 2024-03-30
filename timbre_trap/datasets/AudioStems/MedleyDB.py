@@ -163,10 +163,6 @@ class MedleyDB(MedleyDB):
           List containing the stems with the specified instrument
         """
 
-        if self.metadata is None:
-            # Load metadata only once
-            self.load_metadata()
-
         # Initialize a list to hold valid tracks
         tracks = list()
 
@@ -200,7 +196,7 @@ class MedleyDB(MedleyDB):
         # Break apart the track name
         mixture, stem = os.path.split(track)
 
-        # Get the path to the audio stem
+        # Construct the path to the audio stem
         wav_path = os.path.join(self.base_dir, 'Audio', mixture, f'{mixture}_RAW', f'{stem}.wav')
 
         return wav_path

@@ -26,6 +26,7 @@ __all__ = [
 def seed_everything(seed):
     """
     Set all necessary seeds for PyTorch at once.
+
     WARNING: the number of workers in the training loader affects behavior:
              this is because each sample will inevitably end up being processed
              by a different worker if num_workers is changed, and each worker
@@ -51,11 +52,11 @@ def print_and_log(text, path=None):
     ----------
     text : str
       Text to print/log
-    path : str (None to bypass)
+    path : str or None (Optional)
       Path to file to write text
     """
 
-    # Print text to the console
+    # Print the text to console
     print(text)
 
     if path is not None:
@@ -71,10 +72,10 @@ class DataParallel(torch.nn.DataParallel):
 
     def __getattr__(self, name):
         try:
-            # Check DataParallel
+            # Check DataParallel for the attribute
             return super().__getattr__(name)
         except AttributeError:
-            # Check the wrapped model
+            # Obtain attribute from the wrapped model
             return getattr(self.module, name)
 
 
@@ -117,7 +118,7 @@ class CosineWarmup(torch.optim.lr_scheduler.LRScheduler):
 
     def _get_closed_form_lr(self):
         """
-        Compute the learning rates for the current step.
+        Compute learning rates for the current step.
         """
 
         # Clamp the current step at the chosen number of steps
@@ -239,7 +240,7 @@ def get_max_gradient_norm(module):
         if values.grad is not None:
             # Compute the L2 norm of the gradients
             grad_norm = values.grad.norm(2).item()
-            # Update tracked maximum gradient norm
+            # Update the tracked maximum gradient norm
             maximum_norm = max(maximum_norm, grad_norm)
 
     return maximum_norm
@@ -313,7 +314,7 @@ class MultipitchEvaluator(object):
         # Loop through all keys
         for key in results.keys():
             if key in self.results.keys():
-                # Add the provided score to the pre-existing array
+                # Add the score to the pre-existing array
                 self.results[key] = np.append(self.results[key], results[key])
             else:
                 # Initialize a new array for the metric
@@ -361,7 +362,7 @@ class MultipitchEvaluator(object):
         Returns
         ----------
         results : dict of {str : float} entries
-          Numerical MPE results for a set of predictions
+          Numerical MPE results for the predictions
         """
 
         # Use mir_eval to compute multi-pitch results at specified tolerance
@@ -372,11 +373,11 @@ class MultipitchEvaluator(object):
         # Make keys lowercase and switch to regular dict type
         results = {k.lower(): results[k] for k in results.keys()}
 
-        # Calculate the f1-score using the harmonic mean formula
+        # Calculate f1-score using harmonic mean formula
         f_measure = hmean([results['precision'] + EPSILON,
                            results['recall'] + EPSILON]) - EPSILON
 
-        # Add f1-score to the mir_eval results
+        # Add f1-score to mir_eval results
         results.update({'f1-score' : f_measure})
 
         for k in deepcopy(results).keys():

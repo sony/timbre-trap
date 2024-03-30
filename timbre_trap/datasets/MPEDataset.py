@@ -15,10 +15,7 @@ class MPEDataset(AudioDataset, PitchDataset):
 
         Parameters
         ----------
-        See PitchDataset class for others...
-
-        sample_rate : int
-          Desired sample rate for the audio
+        See AudioDataset and PitchDataset class...
         """
 
         PitchDataset.__init__(self, cqt, resample_idcs, **kwargs)

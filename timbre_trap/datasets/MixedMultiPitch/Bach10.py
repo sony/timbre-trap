@@ -47,7 +47,7 @@ class Bach10(MPEDataset, Bach10):
           Path to audio for the specified track
         """
 
-        # Get the path to the audio mixture
+        # Construct the path to the audio mixture
         wav_path = os.path.join(self.base_dir, f'{track}', f'{track}.wav')
 
         return wav_path
@@ -67,7 +67,7 @@ class Bach10(MPEDataset, Bach10):
           Path to ground-truth for the specified track
         """
 
-        # Get the path to the F0 annotations for whole mixture
+        # Construct the path to the F0 annotations for the whole mixture
         mat_path = os.path.join(self.base_dir, f'{track}', f'{track}-GTF0s.mat')
 
         return mat_path

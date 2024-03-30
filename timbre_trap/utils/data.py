@@ -39,6 +39,8 @@ def stream_url_resource(url, save_path, chunk_size=1024):
       Number of bytes to download at a time
     """
 
+    print(f'Downloading {os.path.basename(url)}...')
+
     # Create an HTTP GET request
     r = requests.get(url,
                      stream=True,
@@ -68,7 +70,7 @@ def stream_url_resource(url, save_path, chunk_size=1024):
     with open(save_path, 'wb') as file:
         # Download all chunks
         for chunk in chunks:
-            # If a chunk was successfully downloaded,
+            # Check if chunk download was successful
             if chunk:
                 # Write the chunk to the file
                 file.write(chunk)
@@ -91,21 +93,21 @@ def unzip_and_remove(zip_path, target=None, tar=False):
       Whether the compressed file is in TAR format
     """
 
-    print(f'Unzipping {os.path.basename(zip_path)}')
+    print(f'Unzipping {os.path.basename(zip_path)}...')
 
-    # Default the save location as the same directory as the zip file
     if target is None:
+        # Default save location to same directory
         target = os.path.dirname(zip_path)
 
     if tar:
         # Open the tar file in read mode
         with tarfile.open(zip_path, 'r') as tar_ref:
-            # Extract the contents into the target directory
+            # Extract contents into target directory
             tar_ref.extractall(target)
     else:
         # Open the zip file in read mode
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            # Extract the contents into the target directory
+            # Extract contents into target directory
             zip_ref.extractall(target)
 
     # Delete the zip file
@@ -124,22 +126,22 @@ def change_base_dir(new_dir, old_dir):
       Old top-level directory
     """
 
-    # Loop through all contents of the old directory
+    # Loop through all contents of old directory
     for content in os.listdir(old_dir):
         # Construct the old path to the contents
         old_path = os.path.join(old_dir, content)
         # Construct the new path to the contents
         new_path = os.path.join(new_dir, content)
-        # Move all files and subdirectories recursively
+        # Move the file or subdirectory
         shutil.move(old_path, new_path)
 
-    # Remove the (now empty) old top-level directory
+    # Remove (now empty) old top-level directory
     os.rmdir(old_dir)
 
 
 def separate_ground_truth(batch):
     """
-    Collate a batch into various groups based on data availability.
+    Collate a batch into groups based on data availability.
 
     Parameters
     ----------
@@ -183,13 +185,13 @@ def separate_ground_truth(batch):
         entries = list(batch[0].keys())
 
         if constants.KEY_AUDIO in entries and constants.KEY_GROUND_TRUTH in entries:
-            # Add the data to the audio/ground-truth list
+            # Add data to audio/ground-truth list
             data_both.append(batch.pop(0))
         elif constants.KEY_AUDIO in entries:
-            # Add the data to the audio-only list
+            # Add data to audio-only list
             data_audio.append(batch.pop(0))
         elif constants.KEY_GROUND_TRUTH in entries:
-            # Add the data to the score-only list
+            # Add data to score-only list
             data_score.append(batch.pop(0))
         else:
             return NotImplementedError

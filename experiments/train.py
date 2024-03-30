@@ -1,7 +1,7 @@
 from timbre_trap.datasets.MixedMultiPitch import URMP as URMP_Mixtures, Bach10 as Bach10_Mixtures, Su, TRIOS
 from timbre_trap.datasets.SoloMultiPitch import URMP as URMP_Stems, MedleyDB_Pitch, GuitarSet
-from timbre_trap.datasets.AudioStems import MedleyDB as MedleyDB_Stems
 from timbre_trap.datasets.AudioMixtures import MedleyDB as MedleyDB_Mixtures, FMA
+from timbre_trap.datasets.AudioStems import MedleyDB as MedleyDB_Stems
 from timbre_trap.datasets import ComboDataset
 from timbre_trap.framework import *
 
@@ -69,13 +69,13 @@ def config():
     # Select whether the validation criteria should be maximized or minimized
     validation_criteria_maximize = True # (False - minimize | True - maximize)
 
-    # Late starting point (0 to disable)
+    # Late starting point for transcription and consistency objectives (0 to disable)
     n_epochs_late_start = 0
 
     # Number of epochs without improvement before reducing learning rate (0 to disable)
     n_epochs_decay = 500
 
-    # Number of epochs before starting epoch counter for learning rate decay
+    # Number of epochs before starting counter for learning rate decay (0 to disable)
     n_epochs_cooldown = 100
 
     # Number of epochs without improvement before early stopping (None to disable)
@@ -97,7 +97,7 @@ def config():
     # Number of octaves the CQT should span
     n_octaves = 9
 
-    # Number of bins in a single octave
+    # Number of bins in an octave
     bins_per_octave = 60
 
     ############
@@ -113,7 +113,7 @@ def config():
     # Create the root directory
     os.makedirs(root_dir, exist_ok=True)
 
-    # Flag to make experimental setup more lightweight
+    # Flag for more lightweight experimental setup
     debug = False
 
     if debug:
@@ -129,7 +129,7 @@ def train_model(checkpoint_path, max_epochs, checkpoint_interval, batch_size, n_
                 n_epochs_warmup, validation_criteria_set, validation_criteria_metric, validation_criteria_maximize,
                 n_epochs_late_start, n_epochs_decay, n_epochs_cooldown, n_epochs_early_stop, gpu_ids, seed,
                 sample_rate, n_octaves, bins_per_octave, n_workers, root_dir, debug):
-    # Discard read-only types
+    # Re-cast read-only types
     multipliers = dict(multipliers)
     gpu_ids = list(gpu_ids)
 
@@ -146,7 +146,7 @@ def train_model(checkpoint_path, max_epochs, checkpoint_interval, batch_size, n_
     fma_base_dir = None
     trios_base_dir = None
 
-    # Initialize the primary PyTorch device
+    # Initialize the primary device
     device = torch.device(f'cuda:{gpu_ids[0]}'
                           if torch.cuda.is_available() else 'cpu')
 
@@ -173,18 +173,18 @@ def train_model(checkpoint_path, max_epochs, checkpoint_interval, batch_size, n_
     # Initialize lists to hold training datasets
     mpe_train, audio_train = list(), list()
 
-    # Set the URMP validation set as was defined in the MT3 paper
+    # Set the URMP validation set in accordance with the MT3 paper
     urmp_val_splits = ['01', '02', '12', '13', '24', '25', '31', '38', '39']
 
     # Allocate remaining tracks to URMP training set
     urmp_train_splits = URMP_Mixtures.available_splits()
 
     for t in urmp_val_splits:
-        # Remove validation track
+        # Remove validation tracks
         urmp_train_splits.remove(t)
 
     if debug:
-        # Instantiate URMP dataset validation mixtures for training
+        # Instantiate URMP dataset (validation) mixtures for training
         urmp_mixes_train = URMP_Mixtures(base_dir=urmp_base_dir,
                                          splits=urmp_val_splits,
                                          sample_rate=sample_rate,
@@ -221,7 +221,7 @@ def train_model(checkpoint_path, max_epochs, checkpoint_interval, batch_size, n_
         #audio_train.append(gset_train)
         #mpe_train.append(gset_train)
 
-        # Instantiate MedleyDB-Pitch subset for training
+        # Instantiate MedleyDB-Pitch dataset for training
         mydb_ptch_train = MedleyDB_Pitch(base_dir=mydb_ptch_base_dir,
                                          splits=None,
                                          sample_rate=sample_rate,
@@ -324,10 +324,10 @@ def train_model(checkpoint_path, max_epochs, checkpoint_interval, batch_size, n_
                  cqt=model.sliCQ,
                  seed=seed)
 
-    # Add all validation datasets to a list
+    # Group together all validation datasets
     validation_sets = [urmp_mixes_val, trios_val, bch10_test, su_test, gset_test]
 
-    # Add all evaluation datasets to a list
+    # Group together all evaluation datasets
     evaluation_sets = [urmp_mixes_val, trios_val, bch10_test, su_test, gset_test]
 
     # Initialize an optimizer for the model parameters
@@ -404,14 +404,16 @@ def train_model(checkpoint_path, max_epochs, checkpoint_interval, batch_size, n_
             # Log the current learning rate for this batch
             writer.add_scalar('train/loss/learning_rate', optimizer.param_groups[0]['lr'], batch_count)
 
-            # Obtain spectral coefficients of audio
+            # Obtain spectral coefficients
             coefficients = model.sliCQ(audio)
 
-            if isinstance(model, TimbreTrapMag):
-                # Convert coefficients to magnitude for reconstruction loss
+            if isinstance(model, TimbreTrapMag) or \
+                len(gpu_ids) > 1 and isinstance(model.module, TimbreTrapMag):
+                # Take magnitude of complex coefficients for reconstruction loss
                 coefficients = model.sliCQ.to_magnitude(coefficients).unsqueeze(-3)
-            if isinstance(model, TimbreTrapMagDB):
-                # Convert magnitude to rescaled decibels
+            if isinstance(model, TimbreTrapMagDB) or \
+                len(gpu_ids) > 1 and isinstance(model.module, TimbreTrapMagDB):
+                # Convert amplitude to rescaled decibels
                 coefficients = model.sliCQ.to_decibels(coefficients)
 
             with torch.autocast(device_type=f'cuda'):
@@ -435,25 +437,27 @@ def train_model(checkpoint_path, max_epochs, checkpoint_interval, batch_size, n_
                 # Compute the total loss for this batch
                 total_loss = multipliers['reconstruction'] * reconstruction_loss
 
+                if multipliers['consistency']:
+                    # Compute the consistency losses for the portion of the batch with ground-truth
+                    consistency_loss_sp, consistency_loss_sc = compute_consistency_loss(
+                        transcription_rec[:mpe_batch_size],
+                        transcription_scr[:mpe_batch_size],
+                        transcription_coeffs[:mpe_batch_size])
+
+                    # Log the (spectral-) consistency loss for this batch
+                    writer.add_scalar('train/loss/consistency/spectral', consistency_loss_sp.item(), batch_count)
+
+                    # Log the (transcription-) consistency loss for this batch
+                    writer.add_scalar('train/loss/consistency/score', consistency_loss_sc.item(), batch_count)
+
+                    # Compute the total consistency loss for the batch
+                    consistency_loss = consistency_loss_sp + consistency_loss_sc
+
                 if i >= n_epochs_late_start:
                     # Add transcription loss to the total loss
                     total_loss += multipliers['transcription'] * transcription_loss
 
                     if multipliers['consistency']:
-                        # Compute the consistency losses for the portion of the batch with ground-truth
-                        consistency_loss_sp, consistency_loss_sc = compute_consistency_loss(transcription_rec[:mpe_batch_size],
-                                                                                            transcription_scr[:mpe_batch_size],
-                                                                                            transcription_coeffs[:mpe_batch_size])
-
-                        # Log the (spectral-) consistency loss for this batch
-                        writer.add_scalar('train/loss/consistency/spectral', consistency_loss_sp.item(), batch_count)
-
-                        # Log the (transcription-) consistency loss for this batch
-                        writer.add_scalar('train/loss/consistency/score', consistency_loss_sc.item(), batch_count)
-
-                        # Compute the consistency loss for the batch
-                        consistency_loss = consistency_loss_sp + consistency_loss_sc
-
                         # Add combined consistency loss to the total loss
                         total_loss += multipliers['consistency'] * consistency_loss
 
@@ -500,11 +504,11 @@ def train_model(checkpoint_path, max_epochs, checkpoint_interval, batch_size, n_
                 model_path = os.path.join(log_dir, f'model-{batch_count}.pt')
 
                 if isinstance(model, torch.nn.DataParallel):
-                    # Unwrap and save the model
-                    torch.save(model.module, model_path)
-                else:
-                    # Save the model as is
-                    torch.save(model, model_path)
+                    # Unwrap the model
+                    model = model.module
+
+                # Save the current model weights
+                torch.save(model, model_path)
 
                 # Initialize dictionary to hold all validation results
                 validation_results = dict()
@@ -518,8 +522,13 @@ def train_model(checkpoint_path, max_epochs, checkpoint_interval, batch_size, n_
                                                                   i=batch_count,
                                                                   device=device)
 
-                # Make sure model is on correct device and switch to training mode
+                if len(gpu_ids) > 1:
+                    # Re-wrap model for multi-GPU usage
+                    model = DataParallel(model, device_ids=gpu_ids)
+
+                # Add model to original device
                 model = model.to(device)
+                # Switch to training mode
                 model.train()
 
                 if decay_scheduler.patience and not warmup_scheduler.is_active() and i >= n_epochs_late_start:

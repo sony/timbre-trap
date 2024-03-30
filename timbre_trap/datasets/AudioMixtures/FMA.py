@@ -43,7 +43,7 @@ class FMA(AudioDataset):
           List containing the songs under the selected directory
         """
 
-        # Construct a path to the dataset split
+        # Construct the path to the dataset split
         split_path = os.path.join(self.base_dir, split)
 
         # Obtain a sorted list of all files in the split's directory
@@ -66,7 +66,7 @@ class FMA(AudioDataset):
           Path to audio for the specified track
         """
 
-        # Get the path to the MP3 file
+        # Construct the path to the MP3 file
         mp3_path = os.path.join(self.base_dir, track[:3], f'{track}.mp3')
 
         return mp3_path

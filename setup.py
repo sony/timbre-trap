@@ -9,7 +9,7 @@ setup(
     python_requires='>=3.10',
     install_requires=[],
     version='0.1.0',
-    license='TODO',
+    license='MIT',
     description='Code for Timbre-Trap framework',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown'

@@ -1,3 +1,4 @@
+from timbre_trap.utils.data import constants
 from .. import MPEDataset
 from ..Common import MedleyDB
 
@@ -16,18 +17,27 @@ class MedleyDB_Pitch(MPEDataset, MedleyDB):
         Override the resampling indices to prevent erroneous extension of pitches.
         """
 
-        # Determine if resampling indices were provided
+        # Determine if keyword arguments were provided
         resample_idcs = kwargs.pop('resample_idcs', None)
+        base_dir = kwargs.pop('base_dir', None)
 
         if resample_idcs is None:
             # Change the default resampling indices
             resample_idcs = [0, 0]
 
-        # Update the value within the keyword arguments
-        kwargs.update({'resample_idcs' : resample_idcs})
+        if base_dir is None:
+            # Assume the dataset exists at the default location
+            base_dir = os.path.join(constants.DEFAULT_LOCATION, self.name())
 
-        # Initialize dictionary for all metadata
+        self.base_dir = base_dir
+
+        # Update the values within the keyword arguments
+        kwargs.update({'resample_idcs' : resample_idcs})
+        kwargs.update({'base_dir' : self.base_dir})
+
+        # Create dictionary for all metadata
         self.metadata = None
+        self.load_metadata()
 
         MPEDataset.__init__(self, **kwargs)
 
@@ -36,7 +46,7 @@ class MedleyDB_Pitch(MPEDataset, MedleyDB):
         Load and process all metadata.
         """
 
-        # Construct a path to the JSON metadata for MedleyDB-Pitch
+        # Construct the path to the JSON metadata for MedleyDB-Pitch
         json_path = os.path.join(self.base_dir, 'medleydb_pitch_metadata.json')
 
         with open(json_path) as f:
@@ -156,10 +166,6 @@ class MedleyDB_Pitch(MPEDataset, MedleyDB):
           List containing the stems with the specified instrument
         """
 
-        if self.metadata is None:
-            # Load metadata only once
-            self.load_metadata()
-
         # Collect track names with the specified instrument in the metadata
         tracks = [t for t in self.metadata.keys() if split in self.metadata[t]['instrument']]
 
@@ -180,7 +186,7 @@ class MedleyDB_Pitch(MPEDataset, MedleyDB):
           Path to audio for the specified track
         """
 
-        # Get the path to the audio stem
+        # Construct the path to the audio stem
         wav_path = os.path.join(self.base_dir, 'audio', f'{track}.wav')
 
         return wav_path
@@ -200,7 +206,7 @@ class MedleyDB_Pitch(MPEDataset, MedleyDB):
           Path to ground-truth for the specified track
         """
 
-        # Get the path to the F0 annotations for the stem
+        # Construct the path to the F0 annotations for the stem
         csv_path = os.path.join(self.base_dir, 'pitch', f'{track}.csv')
 
         return csv_path

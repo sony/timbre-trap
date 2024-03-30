@@ -35,7 +35,7 @@ def to_array(tensor):
 
 def debug_nans(tensor, tag='tensor'):
     """
-    Check if a tensor contains NaNs and throw warnings when this happens.
+    Check if a tensor contains NaNs and throw a warning when it happens.
 
     Parameters
     ----------
@@ -78,13 +78,13 @@ def filter_non_peaks(_arr):
       Data with non-peaks removed
     """
 
-    # Create an extra row to all for edge peaks
-    extra_row = np.zeros(tuple(_arr.shape[:-2]) + (1, _arr.shape[-1]))
+    # Create a row of zeros
+    zeros = np.zeros(tuple(_arr.shape[:-2]) + (1, _arr.shape[-1]))
 
-    # Pad the given array with extra rows
-    padded_arr = np.concatenate((extra_row, _arr, extra_row), axis=-2)
+    # Pad given array with extra rows to consider edge peaks
+    padded_arr = np.concatenate((zeros, _arr, zeros), axis=-2)
 
-    # Initialize an array to hold filtered data
+    # Initialize array to hold filtered data
     arr = np.zeros(padded_arr.shape)
 
     # Determine which indices correspond to peaks

@@ -52,7 +52,7 @@ class TRIOS(TRIOS):
         # Split the track name to obtain hierarchy
         multitrack, instrument = os.path.split(track)
 
-        # Get the path to the audio of the stem
+        # Construct the path to the audio of the stem
         wav_path = os.path.join(self.base_dir, multitrack, f'{instrument}.wav')
 
         return wav_path
@@ -75,7 +75,7 @@ class TRIOS(TRIOS):
         # Split the track name to obtain hierarchy
         multitrack, instrument = os.path.split(track)
 
-        # Get the path to the note annotations for the instrument
+        # Construct the path to the note annotations for the stem
         midi_path = os.path.join(self.base_dir, multitrack, f'{instrument}.mid')
 
         return midi_path

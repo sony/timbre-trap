@@ -53,7 +53,7 @@ class GuitarSet(MPEDataset):
         Parameters
         ----------
         split : string
-          String indicating guitarist ID
+          Guitarist ID
 
         Returns
         ----------
@@ -84,7 +84,7 @@ class GuitarSet(MPEDataset):
           Path to audio for the specified track
         """
 
-        # Get the path to the audio recording
+        # Construct the path to the audio recording
         wav_path = os.path.join(self.base_dir, 'audio_mono-mic', f'{track}_mic.wav')
 
         return wav_path
@@ -104,7 +104,7 @@ class GuitarSet(MPEDataset):
           Path to ground-truth for the specified track
         """
 
-        # Get the path to the F0 annotations for the performance
+        # Construct the path to the F0 annotations for the performance
         jams_path = os.path.join(self.base_dir, 'annotation', f'{track}.jams')
 
         return jams_path
@@ -213,12 +213,12 @@ class GuitarSet(MPEDataset):
         # URL pointing to the zip file containing annotations for all tracks
         anno_url = 'https://zenodo.org/record/3371780/files/annotation.zip'
 
-        # Construct a path to directory to hold annotations
+        # Construct the path to the directory to hold annotations
         anno_dir = os.path.join(save_dir, 'annotation')
         # Create the annotation directory
         os.makedirs(anno_dir)
 
-        # Construct a path for saving the annotations
+        # Construct the path for saving the annotations
         anno_path = os.path.join(anno_dir, os.path.basename(anno_url))
 
         # Download the zip file
@@ -230,7 +230,7 @@ class GuitarSet(MPEDataset):
         # URL pointing to the zip file containing audio for all tracks
         audio_url = 'https://zenodo.org/record/3371780/files/audio_mono-mic.zip'
 
-        # Construct a path to directory to hold audio
+        # Construct the path to the directory to hold audio
         audio_dir = os.path.join(save_dir, 'audio_mono-mic')
         # Create the annotation directory
         os.makedirs(audio_dir)

@@ -1,5 +1,5 @@
 from timbre_trap.utils.data import *
-from ..Common import MedleyDB
+from ..AudioMixtures import MedleyDB
 from .. import BaseDataset
 from . import MedleyDB_Pitch
 
@@ -17,7 +17,7 @@ class MedleyDB_Stem_Synth(MedleyDB_Pitch):
         Call the top-level MedleyDB wrapper's function and remove unavailable stems.
         """
 
-        # Load full MedleyDB metadata
+        # Load metadata for all mixtures
         MedleyDB.load_metadata(self)
 
         # Loop through all metadata entries
@@ -46,7 +46,7 @@ class MedleyDB_Stem_Synth(MedleyDB_Pitch):
           List containing stem names
         """
 
-        # Construct a path to the directory containing pitch annotations
+        # Construct the path to the directory containing pitch annotations
         annotation_dir = os.path.join(self.base_dir, 'annotation_stems')
 
         # Obtain a list of the stem names within the annotation directory
@@ -151,10 +151,6 @@ class MedleyDB_Stem_Synth(MedleyDB_Pitch):
           List containing the stems with the specified instrument
         """
 
-        if self.metadata is None:
-            # Load metadata only once
-            self.load_metadata()
-
         # Initialize a list to hold valid tracks
         tracks = list()
 
@@ -183,7 +179,7 @@ class MedleyDB_Stem_Synth(MedleyDB_Pitch):
           Path to audio for the specified track
         """
 
-        # Get the path to the audio stem
+        # Construct the path to the audio stem
         wav_path = os.path.join(self.base_dir, 'audio_stems', f'{track}.RESYN.wav')
 
         return wav_path
@@ -203,7 +199,7 @@ class MedleyDB_Stem_Synth(MedleyDB_Pitch):
           Path to ground-truth for the specified track
         """
 
-        # Get the path to the F0 annotations for the stem
+        # Construct the path to the F0 annotations for the stem
         csv_path = os.path.join(self.base_dir, 'annotation_stems', f'{track}.RESYN.csv')
 
         return csv_path

@@ -24,15 +24,15 @@ class BaseDataset(Dataset):
         base_dir : string
           Path to the top-level directory
         splits : list of strings
-          Partitions to include in the instance
+          Dataset partitions to include
         n_secs : float
-          Number of seconds to which to trim or pad
+          Sequence length for sampling
         seed : int
           Seed for random sampling
         """
 
         if base_dir is None:
-            # Assume the dataset resides at the default location
+            # Assume the dataset exists at the default location
             base_dir = os.path.join(constants.DEFAULT_LOCATION, self.name())
 
         self.base_dir = base_dir
@@ -45,18 +45,18 @@ class BaseDataset(Dataset):
             self.download(self.base_dir)
 
         if splits is None:
-            # Choose all available dataset splits
+            # Use all available dataset splits
             splits = self.available_splits()
 
         self.tracks = []
 
         for split in splits:
-            # Aggregate all track names from selected splits
+            # Aggregate track names from selected splits
             self.tracks += self.get_tracks(split)
 
         self.n_secs = n_secs
 
-        # Initialize random number generator for the dataset instance
+        # Initialize random number generator
         self.rng = np.random.RandomState(seed)
 
     @classmethod
@@ -87,9 +87,7 @@ class BaseDataset(Dataset):
           Partitions of dataset
         """
 
-        splits = ['all']
-
-        return splits
+        return NotImplementedError
 
     @abstractmethod
     def get_tracks(self, split):
@@ -141,7 +139,7 @@ class BaseDataset(Dataset):
     @abstractmethod
     def download(cls, save_dir):
         """
-        Create the top-level directory for a dataset.
+        Helper to create the top-level directory for inherited datasets.
 
         Parameters
         ----------
@@ -155,8 +153,6 @@ class BaseDataset(Dataset):
 
         # Create the base directory
         os.makedirs(save_dir)
-
-        print(f'Downloading {cls.__name__}...')
 
 
 class ComboDataset(Dataset):
@@ -186,7 +182,7 @@ class ComboDataset(Dataset):
           Total number of tracks
         """
 
-        # Add together length of all constituent datasets
+        # Add together length of combined datasets
         length = sum([len(d) for d in self.datasets])
 
         return length
@@ -212,12 +208,12 @@ class ComboDataset(Dataset):
         local_idx, dataset_idx = index, 0
 
         while local_idx >= self.datasets[dataset_idx].__len__():
-            # Subtract the length of this dataset from the relative
+            # Subtract the length of the dataset from global index
             local_idx -= self.datasets[dataset_idx].__len__()
-            # Check the next dataset
+            # Check next dataset
             dataset_idx += 1
 
-        # Sample corresponding data from the selected dataset
+        # Sample data at the local index of selected dataset
         data = self.datasets[dataset_idx].__getitem__(local_idx)
 
         return data
@@ -309,21 +305,21 @@ class StemMixingDataset(ComboDataset):
                 constants.KEY_AUDIO : None}
 
         if data_audio is not None:
-            # Sum stem audio together to obtain a mix
+            # Sum batched stem audio together to obtain a mixture
             data[constants.KEY_AUDIO] = torch.sum(data_audio[constants.KEY_AUDIO], dim=0)
 
         if data_both is not None:
-            # Sum stem audio together to obtain a mix
+            # Sum batched stem audio together to obtain a mixture
             mpe_audio = torch.sum(data_both[constants.KEY_AUDIO], dim=0)
 
             if data[constants.KEY_AUDIO] is None:
-                # Insert the audio into the dictionary
+                # Insert the audio mixture into the dictionary
                 data[constants.KEY_AUDIO] = mpe_audio
             else:
-                # Add the audio to the prexisting audio
+                # Add the audio to the prexisting mixture
                 data[constants.KEY_AUDIO] += mpe_audio
 
-            # Combine all multi-pitch annotations into a single representation
+            # Combine all multi-pitch annotations into a single representation and clamp activations
             data[constants.KEY_GROUND_TRUTH] = torch.sum(data_both[constants.KEY_GROUND_TRUTH], dim=0).clamp(0, 1)
 
             # Add placeholder frame times to mixture data

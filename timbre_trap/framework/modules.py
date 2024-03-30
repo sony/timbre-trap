@@ -23,7 +23,8 @@ class TimbreTrap(nn.Module):
     Implements a 2D convolutional U-Net architecture based loosely on SoundStream.
     """
 
-    def __init__(self, sample_rate, n_octaves, bins_per_octave, secs_per_block=3, latent_size=None, model_complexity=1, skip_connections=False):
+    def __init__(self, sample_rate, n_octaves, bins_per_octave, secs_per_block=3,
+                       latent_size=None, model_complexity=1, skip_connections=False):
         """
         Initialize the full autoencoder.
 
@@ -75,7 +76,7 @@ class TimbreTrap(nn.Module):
         ----------
         latents : Tensor (B x D_lat x T)
           Batch of latent codes
-        embeddings : list of [Tensor (B x C x H x T)]
+        embeddings : list of [Tensor (B x C x E x T)]
           Embeddings produced by encoder at each level
         losses : dict containing
           ...
@@ -95,12 +96,12 @@ class TimbreTrap(nn.Module):
 
         Parameters
         ----------
-        embeddings : list of [Tensor (B x C x H x T)]
+        embeddings : list of [Tensor (B x C x E x T)]
           Embeddings produced by encoder at each level
 
         Returns
         ----------
-        embeddings : list of [Tensor (B x C x H x T)]
+        embeddings : list of [Tensor (B x C x E x T)]
           Encoder embeddings scaled with learnable weight
         """
 
@@ -121,7 +122,7 @@ class TimbreTrap(nn.Module):
         ----------
         latents : Tensor (B x D_lat x T)
           Batch of latent codes
-        embeddings : list of [Tensor (B x C x H x T)] or None (no skip connections)
+        embeddings : list of [Tensor (B x C x E x T)] or None (no skip connections)
           Embeddings produced by encoder at each level
         transcribe : bool
           Switch for performing transcription vs. reconstruction
@@ -164,7 +165,7 @@ class TimbreTrap(nn.Module):
         # Apply skip connections if they are turned on
         embeddings = self.apply_skip_connections(embeddings)
 
-        # Estimate pitch using transcription switch
+        # Obtain coefficients using transcription switch
         coefficients = self.decode(latents, embeddings, True)
 
         # Convert transcription coefficients to activations
@@ -179,7 +180,7 @@ class TimbreTrap(nn.Module):
         Parameters
         ----------
         coefficients : Tensor (B x 2 x F X T)
-          Batch of transcription spectral coefficients
+          Batch of transcription coefficients
 
         Returns
         ----------
@@ -236,11 +237,11 @@ class TimbreTrap(nn.Module):
         latents : Tensor (B x D_lat x T)
           Batch of latent codes
         transcription : Tensor (B x 2 x F X T)
-          Batch of transcription spectral coefficients
+          Batch of transcription coefficients
         transcription_rec : Tensor (B x 2 x F X T)
-          Batch of reconstructed spectral coefficients for transcription coefficients input
+          Batch of reconstructed coefficients for transcription coefficients
         transcription_scr : Tensor (B x 2 x F X T)
-          Batch of transcription spectral coefficients for transcription coefficients input
+          Batch of transcription coefficients for transcription coefficients
         losses : dict containing
           ...
         """
@@ -254,17 +255,17 @@ class TimbreTrap(nn.Module):
         # Decode latent vectors into spectral coefficients
         reconstruction = self.decode(latents, embeddings)
 
-        # Estimate pitch using transcription switch
+        # Obtain coefficients using transcription switch
         transcription = self.decode(latents, embeddings, True)
 
         if consistency:
-            # Encode transcription coefficients for samples with ground-truth
+            # Re-encode transcription coefficients
             latents_trn, embeddings_trn, _ = self.encoder(transcription)
 
             # Apply skip connections if they are turned on
             embeddings_trn = self.apply_skip_connections(embeddings_trn)
 
-            # Attempt to reconstruct transcription spectral coefficients
+            # Attempt to reconstruct transcription coefficients
             transcription_rec = self.decode(latents_trn, embeddings_trn)
 
             # Attempt to transcribe audio pertaining to transcription coefficients
@@ -330,18 +331,18 @@ class Encoder(nn.Module):
 
     def forward(self, coefficients):
         """
-        Encode a batch of input spectral features.
+        Encode a batch of input spectral coefficients.
 
         Parameters
         ----------
         coefficients : Tensor (B x 2 x F X T)
-          Batch of input spectral features
+          Batch of spectral coefficients
 
         Returns
         ----------
         latents : Tensor (B x D_lat x T)
           Batch of latent codes
-        embeddings : list of [Tensor (B x C x H x T)]
+        embeddings : list of [Tensor (B x C x E x T)]
           Embeddings produced by encoder at each level
         losses : dict containing
           ...
@@ -433,7 +434,7 @@ class Decoder(nn.Module):
         ----------
         latents : Tensor (B x D_lat x T)
           Batch of latent codes
-        encoder_embeddings : list of [Tensor (B x C x H x T)] or None (no skip connections)
+        encoder_embeddings : list of [Tensor (B x C x E x T)] or None (no skip connections)
           Embeddings produced by encoder at each level
 
         Returns
@@ -665,13 +666,14 @@ class TimbreTrapFiLM(TimbreTrap):
     Variant of autoencoder with FiLM layer before decoder.
     """
 
-    def __init__(self, sample_rate, n_octaves, bins_per_octave, secs_per_block=3, latent_size=None, model_complexity=1, skip_connections=False):
+    def __init__(self, sample_rate, n_octaves, bins_per_octave, secs_per_block=3,
+                       latent_size=None, model_complexity=1, skip_connections=False):
         """
         Initialize the full autoencoder.
 
         Parameters
         ----------
-        See Transcriber class...
+        See TimbreTrap class...
         """
 
         TimbreTrap.__init__(self, sample_rate, n_octaves, bins_per_octave, secs_per_block,
@@ -699,7 +701,7 @@ class TimbreTrapFiLM(TimbreTrap):
         ----------
         latents : Tensor (B x D_lat x T)
           Batch of latent codes
-        embeddings : list of [Tensor (B x C x H x T)] or None (no skip connections)
+        embeddings : list of [Tensor (B x C x E x T)] or None (no skip connections)
           Embeddings produced by encoder at each level
         transcribe : bool
           Switch for performing transcription vs. reconstruction
@@ -776,13 +778,14 @@ class TimbreTrapMag(TimbreTrap):
     Magnitude-CQT (amplitude) variant of autoencoder.
     """
 
-    def __init__(self, sample_rate, n_octaves, bins_per_octave, secs_per_block=3, latent_size=None, model_complexity=1, skip_connections=False):
+    def __init__(self, sample_rate, n_octaves, bins_per_octave, secs_per_block=3,
+                       latent_size=None, model_complexity=1, skip_connections=False):
         """
         Initialize the full autoencoder.
 
         Parameters
         ----------
-        See Transcriber class...
+        See TimbreTrap class...
         """
 
         TimbreTrap.__init__(self, sample_rate, n_octaves, bins_per_octave, secs_per_block,
@@ -811,7 +814,7 @@ class TimbreTrapMag(TimbreTrap):
         ----------
         latents : Tensor (B x D_lat x T)
           Batch of latent codes
-        embeddings : list of [Tensor (B x C x H x T)]
+        embeddings : list of [Tensor (B x C x E x T)]
           Embeddings produced by encoder at each level
         losses : dict containing
           ...
@@ -833,7 +836,7 @@ class TimbreTrapMag(TimbreTrap):
         ----------
         latents : Tensor (B x D_lat x T)
           Batch of latent codes
-        embeddings : list of [Tensor (B x C x H x T)] or None (no skip connections)
+        embeddings : list of [Tensor (B x C x E x T)] or None (no skip connections)
           Embeddings produced by encoder at each level
         transcribe : bool
           Switch for performing transcription vs. reconstruction
@@ -891,7 +894,7 @@ class TimbreTrapMagDB(TimbreTrapMag):
         ----------
         latents : Tensor (B x D_lat x T)
           Batch of latent codes
-        embeddings : list of [Tensor (B x C x H x T)]
+        embeddings : list of [Tensor (B x C x E x T)]
           Embeddings produced by encoder at each level
         losses : dict containing
           ...
@@ -916,7 +919,7 @@ class TimbreTrapMagDB(TimbreTrapMag):
         ----------
         latents : Tensor (B x D_lat x T)
           Batch of latent codes
-        embeddings : list of [Tensor (B x C x H x T)] or None (no skip connections)
+        embeddings : list of [Tensor (B x C x E x T)] or None (no skip connections)
           Embeddings produced by encoder at each level
         transcribe : bool
           Switch for performing transcription vs. reconstruction

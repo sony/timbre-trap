@@ -67,7 +67,7 @@ class MusicNet(AMTDataset):
         # Break apart partition and track name
         split, name = os.path.split(track)
 
-        # Get the path to the audio
+        # Construct the path to the audio
         wav_path = os.path.join(self.base_dir, f'{split}_data', f'{name}.wav')
 
         return wav_path
@@ -90,7 +90,7 @@ class MusicNet(AMTDataset):
         # Break apart partition and track name
         split, name = os.path.split(track)
 
-        # Get the path to the ground-truth note annotations
+        # Construct the path to the ground-truth note annotations for the track
         csv_path = os.path.join(self.base_dir, f'{split}_labels', f'{name}.csv')
 
         return csv_path

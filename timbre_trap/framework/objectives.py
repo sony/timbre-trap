@@ -10,14 +10,14 @@ __all__ = [
 
 def compute_reconstruction_loss(reconstructed, target):
     """
-    Compute reconstruction loss with respect to spectral features for a batch.
+    Compute reconstruction loss for a batch.
 
     Parameters
     ----------
     reconstructed : Tensor (B x C_in x F X T)
-      Batch of reconstructed spectral features
+      Batch of reconstructed coefficients
     target : Tensor (B x C_in x F X T)
-      Batch of original spectral features
+      Batch of original coefficients
 
     Returns
     ----------
@@ -25,7 +25,7 @@ def compute_reconstruction_loss(reconstructed, target):
       Total reconstruction loss for the batch
     """
 
-    # Compute mean squared error with respect to every time-frequency bin of spectral features
+    # Compute mean squared error with respect to every time-frequency bin of coefficients
     reconstruction_loss = torch.nn.functional.mse_loss(reconstructed, target, reduction='none')
     # Sum reconstruction loss across channel / frequency and average across time / batch
     reconstruction_loss = reconstruction_loss.sum(-3).sum(-2).mean()
@@ -44,7 +44,7 @@ def compute_transcription_loss(estimate, target, weight_positive_class=False):
     target : Tensor (B x F x T)
       Batch of ground-truth scores
     weight_positive_class : bool
-      Whether to apply weight to loss for positive targets
+      Whether to proportionally weight loss for positive targets
 
     Returns
     ----------

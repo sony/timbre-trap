@@ -57,7 +57,7 @@ class URMP(MPEDataset, URMP):
         # Break apart the track name
         mixture, stem = os.path.split(track)
 
-        # Get the path to the audio stem
+        # Construct the path to the audio stem
         wav_path = os.path.join(self.base_dir, mixture, f'AuSep_{stem}.wav')
 
         return wav_path
@@ -80,7 +80,7 @@ class URMP(MPEDataset, URMP):
         # Break apart the track name
         mixture, stem = os.path.split(track)
 
-        # Get the path to the F0 annotations for the stem
+        # Construct the path to the F0 annotations for the stem
         txt_path = os.path.join(self.base_dir, mixture, f'F0s_{stem}.txt')
 
         return txt_path

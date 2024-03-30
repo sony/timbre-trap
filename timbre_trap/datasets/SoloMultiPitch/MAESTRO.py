@@ -70,7 +70,7 @@ class MAESTRO(AMTDataset):
           Path to audio for the specified track
         """
 
-        # Get the path to the audio recording
+        # Construct the path to the audio recording
         wav_path = os.path.join(self.base_dir, f'{track}.wav')
 
         return wav_path
@@ -90,7 +90,7 @@ class MAESTRO(AMTDataset):
           Path to ground-truth for the specified track
         """
 
-        # Get the path to the note annotations for the performance
+        # Construct the path to the note annotations for the performance
         midi_path = os.path.join(self.base_dir, f'{track}.midi')
 
         return midi_path

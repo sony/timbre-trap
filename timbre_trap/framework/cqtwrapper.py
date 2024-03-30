@@ -87,7 +87,7 @@ class CQT(_CQT):
           Batch of real/imaginary CQT coefficients
         """
 
-        # Collapse channel dimension (mono assumed)
+        # Collapse channel dimension
         coefficients = coefficients.squeeze(-3)
         # Convert complex coefficients to real and imaginary
         coefficients = torch.view_as_real(coefficients)
@@ -135,7 +135,7 @@ class CQT(_CQT):
           Batch of magnitude coefficients
         """
 
-        # Compute L2-norm of coefficients to compute magnitude
+        # Compute L2-norm of coefficients
         magnitude = coefficients.norm(p=2, dim=-3)
 
         return magnitude
@@ -143,10 +143,9 @@ class CQT(_CQT):
     @staticmethod
     def to_decibels(magnitude, rescale=True):
         """
-        Convert a set of magnitude coefficients to decibels.
+        Convert magnitude coefficients to decibels.
 
         TODO - move 0 dB only if maximum is higher?
-             - currently it's consistent with previous dB scaling
 
         Parameters
         ----------
@@ -158,19 +157,20 @@ class CQT(_CQT):
         Returns
         ----------
         decibels : Tensor (B x F X T)
-          Batch of magnitude coefficients (dB)
+          Batch of magnitude coefficients (power in dB)
         """
 
         decibels = list()
 
+        # Loop through each track separately
         for m in magnitude:
-            # Convert to decibels
+            # Convert amplitude coefficients to decibels
             d = AmplitudeToDB(stype='amplitude', top_db=80)(m)
 
             if rescale:
-                # Make 0 dB ceiling
+                # Make ceiling 0 dB
                 d -= d.max()
-                # Rescale decibels to range [0, 1]
+                # Rescale to range [0, 1]
                 d = 1 + d / 80
 
             # Add converted sample to list
