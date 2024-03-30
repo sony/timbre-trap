@@ -17,3 +17,4 @@ torchmetrics
 tensorboard
 sacred
 basic-pitch
+tensorflow
