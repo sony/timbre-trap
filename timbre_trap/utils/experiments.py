@@ -1,11 +1,11 @@
 from scipy.stats import hmean
 from copy import deepcopy
+from math import cos, pi
 
 import numpy as np
 import mir_eval
 import random
 import torch
-import math
 import sys
 
 
@@ -84,18 +84,21 @@ class CosineWarmup(torch.optim.lr_scheduler.LRScheduler):
     A simple wrapper to implement reverse cosine annealing as a PyTorch LRScheduler.
     """
 
-    def __init__(self, optimizer, n_steps, last_epoch=-1, verbose=False):
+    def __init__(self, optimizer, n_steps):
         """
         Initialize the scheduler and set the duration of warmup.
 
         Parameters
         ----------
-        See LRScheduler class...
+        optimizer : PyTorch Optimizer
+          Optimizer object with learning rates to schedule
+        n_steps : int
+          Number of steps to reach maximum scaling
         """
 
-        self.n_steps = max(1, n_steps)
+        self.n_steps = max(0, n_steps)
 
-        super().__init__(optimizer, last_epoch, verbose)
+        super().__init__(optimizer)
 
     def is_active(self):
         """
@@ -105,6 +108,14 @@ class CosineWarmup(torch.optim.lr_scheduler.LRScheduler):
         active = self.last_epoch < self.n_steps
 
         return active
+
+    def reset(self):
+        """
+        Reset the scheduler.
+        """
+
+        self.last_epoch = -1
+        self.step()
 
     def get_lr(self):
         """
@@ -121,10 +132,10 @@ class CosineWarmup(torch.optim.lr_scheduler.LRScheduler):
         Compute learning rates for the current step.
         """
 
-        # Clamp the current step at the chosen number of steps
-        curr_step = max(0, min(self.last_epoch, self.n_steps))
+        # Clamp current step at chosen number of steps
+        curr_step = 1 + min(self.last_epoch, self.n_steps)
         # Compute scaling corresponding to current step
-        scaling = 1 - 0.5 * (1 + math.cos(curr_step * math.pi / self.n_steps))
+        scaling = 1 - 0.5 * (1 + cos(curr_step * pi / (self.n_steps + 1)))
         # Apply the scaling to each learning rate
         lr = [scaling * base_lr for base_lr in self.base_lrs]
 

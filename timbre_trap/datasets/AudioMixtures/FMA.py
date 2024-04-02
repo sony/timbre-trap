@@ -1,7 +1,7 @@
 from timbre_trap.utils.data import *
 from .. import AudioDataset
 
-import numpy as np
+import pandas as pd
 import os
 
 
@@ -12,6 +12,66 @@ class FMA(AudioDataset):
 
     SIZE = None
 
+    def __init__(self, **kwargs):
+        """
+        Add a field to store metadata for all available multitracks.
+        """
+
+        self.metadata = None
+
+        AudioDataset.__init__(self, **kwargs)
+
+    def load_metadata(self):
+        """
+        Load and process relevant metadata for splits.
+        """
+
+        # Construct the path to the list of genres in the dataset
+        genres_path = os.path.join(self.base_dir, 'fma_metadata', 'genres.csv')
+
+        # Load tabulated genre data from the csv file
+        genre_entries = pd.read_csv(genres_path)
+
+        # Extract the genre IDs, names, and parents
+        genre_ids = list(genre_entries.genre_id)
+        sub_genres = list(genre_entries.title)
+        root_genres = list(genre_entries.top_level)
+        # Convert root genre indices to strings
+        root_genres = [sub_genres[genre_ids.index(k)] for k in root_genres]
+
+        # Create a lookup table from sub-genre to root genre
+        genre_lookup = dict(zip(genre_ids, root_genres))
+
+        # Construct the path to the list of tracks in the dataset
+        tracks_path = os.path.join(self.base_dir, 'fma_metadata', 'tracks.csv')
+
+        # Load tabulated track data from the csv file
+        track_entries = pd.read_csv(tracks_path, skiprows=2)
+
+        # Extract track IDs from the data
+        track_ids = list(track_entries.track_id)
+        # Extract genre entries (track.genres) from the data
+        track_genres = list(track_entries.pop('Unnamed: 41'))
+
+        # Loop through the genre entries for each track
+        for i, genres in enumerate(track_genres.copy()):
+            if len(genres) > 2:
+                # Convert genre entry to a list
+                genres = genres[1:-1].split(', ')
+                # Use the lookup table to obtain names for sub-genres
+                genres = [genre_lookup[int(k)] for k in genres]
+                # Remove redunant genres
+                track_genres[i] = list(set(genres))
+            else:
+                # Insert a null genre
+                track_genres[i] = ['None']
+
+        # Convert track IDs to appropriate naming scheme
+        track_ids = [f'{int(t):06d}' for t in track_ids]
+
+        # Populate the metadata with tracks and genres
+        self.metadata = dict(zip(track_ids, track_genres))
+
     @staticmethod
     def available_splits():
         """
@@ -20,11 +80,13 @@ class FMA(AudioDataset):
         Returns
         ----------
         splits : list of strings
-          Top-level directories from download
+          Top-level genre categories
         """
 
-        # All numbered directories with leading zeros
-        splits = [str(i).zfill(3) for i in np.arange(156)]
+        # All parent genres in the dataset (in order of occurrences)
+        splits = ['Rock', 'Electronic', 'Experimental', 'Hip-Hop', 'Folk', 'Instrumental',
+                  'Pop', 'International', 'Classical', 'Old-Time / Historic', 'Jazz',
+                  'Country', 'Soul-RnB', 'Spoken', 'Blues', 'Easy Listening', 'None']
 
         return splits
 
@@ -43,11 +105,18 @@ class FMA(AudioDataset):
           List containing the songs under the selected directory
         """
 
-        # Construct the path to the dataset split
-        split_path = os.path.join(self.base_dir, split)
+        if self.metadata is None:
+            # Make sure metadata has been loaded
+            self.load_metadata()
 
-        # Obtain a sorted list of all files in the split's directory
-        tracks = sorted([os.path.splitext(f)[0] for f in os.listdir(split_path)])
+        # Initialize a list to hold valid tracks
+        tracks = list()
+
+        for track in self.metadata.keys():
+            # Check if track has the specified genre
+            if split in self.metadata[track]:
+                # Add the track name
+                tracks.append(track)
 
         return tracks
 
@@ -101,17 +170,29 @@ class FMA(AudioDataset):
         # Create top-level directory
         super().download(save_dir)
 
-        # URL pointing to the zip file containing excerpts for all tracks
-        url = f'https://os.unil.cloud.switch.ch/fma/fma_{cls.SIZE}.zip'
+        # URL pointing to the zip file containing all the metadata
+        meta_url = f'https://os.unil.cloud.switch.ch/fma/fma_metadata.zip'
 
-        # Construct a path for saving the file
-        zip_path = os.path.join(save_dir, os.path.basename(url))
+        # Construct a path for saving the metadata
+        meta_path = os.path.join(save_dir, os.path.basename(meta_url))
 
-        # Download the zip file
-        stream_url_resource(url, zip_path, 1000 * 1024)
+        # Download the metadata zip file
+        stream_url_resource(meta_url, meta_path, 1000 * 1024)
 
         # Unzip the downloaded file and remove it
-        unzip_and_remove(zip_path)
+        unzip_and_remove(meta_path)
+
+        # URL pointing to the zip file containing excerpts for all tracks
+        audio_url = f'https://os.unil.cloud.switch.ch/fma/fma_{cls.SIZE}.zip'
+
+        # Construct a path for saving the audio
+        audio_path = os.path.join(save_dir, os.path.basename(audio_url))
+
+        # Download the audio zip file
+        stream_url_resource(audio_url, audio_path, 1000 * 1024)
+
+        # Unzip the downloaded file and remove it
+        unzip_and_remove(audio_path)
 
         # Move contents of unzipped directory to the base directory
         change_base_dir(save_dir, os.path.join(save_dir, f'fma_{cls.SIZE}'))

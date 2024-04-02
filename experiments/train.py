@@ -389,10 +389,6 @@ def train_model(checkpoint_path, max_epochs, checkpoint_interval, batch_size, n_
             # Increment the batch counter
             batch_count += 1
 
-            if warmup_scheduler.is_active():
-                # Step the learning rate warmup scheduler
-                warmup_scheduler.step()
-
             # Extract MPE data and add to appropriate device
             audio = data_mpe[constants.KEY_AUDIO].to(device)
             ground_truth = data_mpe[constants.KEY_GROUND_TRUTH].to(device).float()
@@ -498,6 +494,10 @@ def train_model(checkpoint_path, max_epochs, checkpoint_interval, batch_size, n_
 
                 # Perform an optimization step
                 optimizer.step()
+
+            if warmup_scheduler.is_active():
+                # Step the learning rate warmup scheduler
+                warmup_scheduler.step()
 
             if batch_count % checkpoint_interval == 0:
                 # Construct a path to save the model checkpoint
