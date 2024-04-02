@@ -8,7 +8,7 @@ setup(
     packages=find_packages(),
     python_requires='>=3.10',
     install_requires=[],
-    version='0.1.0',
+    version='0.1.1',
     license='MIT',
     description='Code for Timbre-Trap framework',
     long_description=open('README.md').read(),
