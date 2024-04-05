@@ -230,7 +230,7 @@ class PitchDataset(BaseDataset):
         return multi_pitch
 
     @staticmethod
-    def multi_pitch_to_activations(multi_pitch, midi_freqs):
+    def multi_pitch_to_activations(multi_pitch, midi_freqs, n_bins_blur=2):
         """
         Convert a sequence of active pitches into an array of discrete pitch activations.
 
@@ -240,6 +240,8 @@ class PitchDataset(BaseDataset):
           Frame-level multi-pitch annotations in Hertz
         midi_freqs : ndarray (F)
           MIDI frequency corresponding to each bin
+        n_bins_blur : int
+          Length about center of blurring kernel
 
         Returns
         ----------
@@ -284,10 +286,34 @@ class PitchDataset(BaseDataset):
 
             # Determine the closest frequency bin for each pitch observation
             multi_pitch_idcs = np.concatenate([res_func_freq(multi_pitch[i])
-                                               for i in sorted(set(frame_idcs))])
+                                               for i in sorted(set(frame_idcs))]).astype('int')
 
-            # Insert pitch activity into the ground-truth array
-            activations[multi_pitch_idcs.astype('uint'), frame_idcs] = 1
+            if n_bins_blur:
+                # Create relative bin indices for kernel
+                bin_idcs = np.arange(1 + 2 * n_bins_blur) - n_bins_blur
+                # Create Gaussian blur kernel with unit standard deviation
+                kernel = np.exp(-(1 / 2) * (bin_idcs / 1) ** 2)
+
+                # TODO - stronger blur for overlapping activations?
+
+                # Iterate through positive activations
+                for i, j in zip(multi_pitch_idcs, frame_idcs):
+                    # Obtain absolute indices for blurred activations
+                    start_i, end_i = i - n_bins_blur, i + n_bins_blur + 1
+
+                    # Clip blurred indices according to activation boundaries
+                    start_clip, end_clip = max(0, start_i), min(len(midi_freqs), end_i)
+
+                    # Determine corresponding indices relative to kernel
+                    start_rel = abs(min(0, start_i))
+                    end_rel = len(kernel) - abs(min(0, len(midi_freqs) - end_i))
+
+                    # Insert values without superimposing kernels for multiple activations
+                    activations[start_clip : end_clip, j] = np.maximum(kernel[start_rel : end_rel],
+                                                                       activations[start_clip : end_clip, j])
+            else:
+                # Insert activations into the ground-truth array
+                activations[multi_pitch_idcs, frame_idcs] = 1
 
         return activations
 
