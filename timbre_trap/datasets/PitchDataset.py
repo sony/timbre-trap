@@ -2,6 +2,7 @@ from timbre_trap.utils.processing import threshold, filter_non_peaks
 from timbre_trap.utils.data import constants
 from . import BaseDataset
 
+from scipy.ndimage import filters
 from abc import abstractmethod
 
 import numpy as np
@@ -230,7 +231,7 @@ class PitchDataset(BaseDataset):
         return multi_pitch
 
     @staticmethod
-    def multi_pitch_to_activations(multi_pitch, midi_freqs, n_bins_blur=2):
+    def multi_pitch_to_activations(multi_pitch, midi_freqs, n_bins_blur_decay=2.5):
         """
         Convert a sequence of active pitches into an array of discrete pitch activations.
 
@@ -240,8 +241,10 @@ class PitchDataset(BaseDataset):
           Frame-level multi-pitch annotations in Hertz
         midi_freqs : ndarray (F)
           MIDI frequency corresponding to each bin
-        n_bins_blur : int
-          Length about center of blurring kernel
+        n_bins_blur_decay : int (0 to disable)
+          Number of bins until blurred energy decays
+          (by default, corresponds to a quartertone
+           at 5 bin per semitone resolution)
 
         Returns
         ----------
@@ -288,32 +291,18 @@ class PitchDataset(BaseDataset):
             multi_pitch_idcs = np.concatenate([res_func_freq(multi_pitch[i])
                                                for i in sorted(set(frame_idcs))]).astype('int')
 
-            if n_bins_blur:
-                # Create relative bin indices for kernel
-                bin_idcs = np.arange(1 + 2 * n_bins_blur) - n_bins_blur
-                # Create Gaussian blur kernel with unit standard deviation
-                kernel = np.exp(-(1 / 2) * (bin_idcs / 1) ** 2)
+            # Insert activations into the ground-truth array
+            activations[multi_pitch_idcs, frame_idcs] = 1
 
-                # TODO - stronger blur for overlapping activations?
-
-                # Iterate through positive activations
-                for i, j in zip(multi_pitch_idcs, frame_idcs):
-                    # Obtain absolute indices for blurred activations
-                    start_i, end_i = i - n_bins_blur, i + n_bins_blur + 1
-
-                    # Clip blurred indices according to activation boundaries
-                    start_clip, end_clip = max(0, start_i), min(len(midi_freqs), end_i)
-
-                    # Determine corresponding indices relative to kernel
-                    start_rel = abs(min(0, start_i))
-                    end_rel = len(kernel) - abs(min(0, len(midi_freqs) - end_i))
-
-                    # Insert values without superimposing kernels for multiple activations
-                    activations[start_clip : end_clip, j] = np.maximum(kernel[start_rel : end_rel],
-                                                                       activations[start_clip : end_clip, j])
-            else:
-                # Insert activations into the ground-truth array
-                activations[multi_pitch_idcs, frame_idcs] = 1
+            if n_bins_blur_decay and len(multi_pitch_idcs):
+                # Compute standard deviation for Gaussian kernel
+                std_dev = (2 * n_bins_blur_decay) / 5
+                # Blur activations along the frequency axis with a Gaussian filter
+                activations = filters.gaussian_filter1d(activations, sigma=std_dev, axis=0, mode='constant')
+                # Re-normalize blurred activations such that ground-truth is 1
+                activations /= np.min(activations[multi_pitch_idcs, frame_idcs])
+                # Clamp superimposed activations to maximum probability
+                activations = np.clip(activations, a_min=0.0, a_max=1.0)
 
         return activations
 
