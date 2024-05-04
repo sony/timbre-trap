@@ -1,5 +1,7 @@
 from . import CQT
 
+from tqdm import tqdm
+
 import torch.nn as nn
 import torch
 
@@ -125,7 +127,7 @@ class TimbreTrap(nn.Module):
         embeddings : list of [Tensor (B x C x E x T)] or None (no skip connections)
           Embeddings produced by encoder at each level
         transcribe : bool
-          Switch for performing transcription vs. reconstruction
+          Switch for transcription vs. reconstruction
 
         Returns
         ----------
@@ -146,20 +148,20 @@ class TimbreTrap(nn.Module):
 
     def _inference(self, audio, transcribe=False):
         """
-        Perform reconstruction or transcription for a batch of raw audio.
+        Encode audio into latents, then decode into
+        transcription or reconstruction coefficients.
 
         Parameters
         ----------
         audio : Tensor (B x 1 x N)
           Batch of input raw audio
         transcribe : bool
-          Switch for performing transcription vs. reconstruction
+          Switch for transcription vs. reconstruction
 
         Returns
         ----------
-        output : Tensor (B x F X T) or (B x 2 x F X T)
-          Batch of multi-pitch activations [0, 1] or
-          reconstructed spectral coefficients [0, 1]
+        coefficients : Tensor (B x 2 x F X T)
+          Batch of spectral coefficients [-∞, ∞]
         """
 
         # Encode raw audio into latent vectors
@@ -169,13 +171,103 @@ class TimbreTrap(nn.Module):
         embeddings = self.apply_skip_connections(embeddings)
 
         # Obtain coefficients with appropriate switch setting
-        output = self.decode(latents, embeddings, transcribe)
+        coefficients = self.decode(latents, embeddings, transcribe)
 
-        if transcribe:
-            # Convert coefficients to activations
-            output = self.to_activations(output)
+        return coefficients
 
-        return output
+    def inference(self, audio, transcribe=False):
+        """
+        Perform full-length inference on a batch of raw audio.
+
+        Parameters
+        ----------
+        audio : Tensor (B x 1 x N)
+          Batch of input raw audio
+        transcribe : bool
+          Switch for transcription vs. reconstruction
+
+        Returns
+        ----------
+        coefficients : Tensor (B x 2 x F X T)
+          Batch of spectral coefficients [-∞, ∞]
+        """
+
+        # Pad audio to next multiple of block length
+        audio = self.sliCQ.pad_to_block_length(audio)
+
+        with torch.no_grad():
+            # Perform inference on the full-length audio
+            coefficients = self._inference(audio, transcribe)
+
+        return coefficients
+
+    def chunked_inference(self, audio, transcribe=False):
+        """
+        Perform inference iteratively on a batch of raw audio.
+
+        Parameters
+        ----------
+        audio : Tensor (B x 1 x N)
+          Batch of input raw audio
+        transcribe : bool
+          Switch for transcription vs. reconstruction
+
+        Returns
+        ----------
+        coefficients : Tensor (B x 2 x F X T)
+          Batch of spectral coefficients [-∞, ∞]
+        """
+
+        # Determine appropriate device
+        device = audio.device
+        # Determine batch size and bin length
+        B, F = audio.size(0), self.sliCQ.n_bins
+
+        # Pad audio to next multiple of block length
+        audio = self.sliCQ.pad_to_block_length(audio)
+
+        with torch.no_grad():
+            # Compute hop length for 50% overlap
+            hop_length = self.sliCQ.block_length // 2
+            # Pad both sides of audio to center first and last block
+            audio = torch.nn.functional.pad(audio, [hop_length] * 2)
+            # Determine total number of chunks to process
+            n_chunks = (audio.size(-1) - hop_length) // hop_length
+
+            # Determine number of frames for each chunk
+            n_frames_chunk = self.sliCQ.max_window_length
+            # Initialize a function for windowing chunked output
+            window = torch.signal.windows.hann(n_frames_chunk, device=device)
+
+            # Determine total number of frames corresponding to audio
+            n_frames = self.sliCQ.get_expected_frames(audio.size(-1))
+            # Initialize a Tensor of zeros for final output coefficients
+            coefficients = torch.zeros((B, 2, F, n_frames), device=device)
+
+            # Process chunks of audio iteratively and display a progress bar
+            for i in tqdm(range(n_chunks), position=0, leave=True, desc='\t\tprocessing chunks'):
+                # Compute sample boundaries for slice
+                sample_start = i * hop_length
+                sample_stop = sample_start + self.sliCQ.block_length
+
+                # Slice the next chunk of audio to block length
+                audio_chunk = audio[..., sample_start : sample_stop]
+
+                # Perform inference on the current chunk of audio
+                output_chunk = self._inference(audio_chunk, transcribe)
+
+                # Compute sample boundaries for slice
+                frame_start = i * n_frames_chunk // 2
+                frame_stop = frame_start + n_frames_chunk
+
+                # Apply windowing and add chunk output to final output coefficients
+                coefficients[..., frame_start : frame_stop] += window * output_chunk
+
+            # Remove output frames corresponding to extra padding
+            coefficients = coefficients[..., n_frames_chunk // 2 :
+                                             -n_frames_chunk // 2]
+
+        return coefficients
 
     def to_activations(self, coefficients):
         """
@@ -184,7 +276,7 @@ class TimbreTrap(nn.Module):
         Parameters
         ----------
         coefficients : Tensor (B x 2 x F X T)
-          Batch of transcription coefficients
+          Batch of transcription coefficients [-∞, ∞]
 
         Returns
         ----------
@@ -197,103 +289,14 @@ class TimbreTrap(nn.Module):
 
         return activations
 
-    def inference(self, audio, transcribe=False):
-        """
-        Perform inference (either function) on a batch of raw audio.
-
-        Parameters
-        ----------
-        audio : Tensor (B x 1 x N)
-          Batch of input raw audio
-        transcribe : bool
-          Switch for performing transcription vs. reconstruction
-
-        Returns
-        ----------
-        output : Tensor (B x F X T) or (B x 2 x F X T)
-          Batch of multi-pitch activations [0, 1] or
-          reconstructed spectral coefficients [0, 1]
-        """
-
-        # Pad audio to next multiple of block length
-        audio = self.sliCQ.pad_to_block_length(audio)
-
-        with torch.no_grad():
-            # Perform inference on the entire audio
-            output = self._inference(audio, transcribe)
-
-        return output
-
-    def chunked_inference(self, audio, transcribe=False):
-        """
-        Perform inference (either function) iteratively on chunks of raw audio.
-
-        Parameters
-        ----------
-        audio : Tensor (B x 1 x N)
-          Batch of input raw audio
-        transcribe : bool
-          Switch for performing transcription vs. reconstruction
-
-        Returns
-        ----------
-        output : Tensor (B x F X T) or (B x 2 x F X T)
-          Batch of multi-pitch activations [0, 1] or
-          reconstructed spectral coefficients [0, 1]
-        """
-
-        # Determine appropriate device
-        device = audio.device
-        # Determine batch size and bin length
-        B, F = audio.size(0), self.sliCQ.n_bins
-
-        # Pad audio to next multiple of block length
-        audio = self.sliCQ.pad_to_block_length(audio)
-
-        with torch.no_grad():
-            # Determine total number of frames corresponding to audio
-            n_frames = self.sliCQ.get_expected_frames(audio.size(-1))
-            # Initialize a Tensor of zeros for final output
-            output = torch.zeros((B, F, n_frames), device=device)
-
-            # Compute hop length for 50% overlap
-            hop_length = self.sliCQ.block_length // 2
-            # Determine total number of chunks to process
-            n_chunks = (audio.size(-1) - hop_length) // hop_length
-
-            # Determine number of frames for each chunk
-            n_frames_chunk = self.sliCQ.max_window_length
-            # Initialize a function for windowing chunked output
-            window = torch.signal.windows.hann(n_frames_chunk, device=device)
-
-            # TODO - progress bar?
-            for i in range(n_chunks):
-                # Compute sample boundaries for slice
-                sample_start = i * hop_length
-                sample_stop = sample_start + self.sliCQ.block_length
-
-                # Slice the next chunk of audio
-                audio_chunk = audio[..., sample_start : sample_stop]
-
-                # Perform inference on the current chunk of audio
-                output_chunk = self._inference(audio_chunk, transcribe)
-
-                # Compute sample boundaries for slice
-                frame_start = i * n_frames_chunk // 2
-                frame_stop = frame_start + n_frames_chunk
-
-                # Add windowed chunk output to final output
-                output[..., frame_start : frame_stop] += window * output_chunk
-
-        return output
 
     def transcribe(self, audio):
         """
-        Obtain transcriptions for a batch of raw audio.
+        Obtain multi-pitch activations for a batch of raw audio.
 
         Parameters
         ----------
-        audio : Tensor (B x 1 x T)
+        audio : Tensor (B x 1 x N)
           Batch of input raw audio
 
         Returns
@@ -302,30 +305,36 @@ class TimbreTrap(nn.Module):
           Batch of multi-pitch activations [0, 1]
         """
 
-        # Perform inference under transcription mode
-        activations = self.inference(audio, True)
+        # Obtain transcription coefficients for the audio
+        coefficients = self.chunked_inference(audio, True)
+
+        # Convert transcription coefficients into activations
+        activations = self.to_activations(coefficients)
 
         return activations
 
-    def reconstruct(self, audio):
+    def reconstruct(self, audio_in):
         """
-        Obtain reconstructed coefficients for a batch of raw audio.
+        Encode and reconstruct a batch of raw audio.
 
         Parameters
         ----------
-        audio : Tensor (B x 1 x T)
+        audio_in : Tensor (B x 1 x N)
           Batch of input raw audio
 
         Returns
         ----------
-        reconstruction : Tensor (B x 2 x F X T)
-          Batch of reconstructed spectral coefficients
+        audio_out : Tensor (B x 1 x L)
+          Batch of reconstructed audio
         """
 
-        # Perform inference under reconstruction mode
-        reconstruction = self.inference(audio, False)
+        # Obtain reconstructed spectral coefficients for the audio
+        coefficients = self.chunked_inference(audio_in, False)
 
-        return reconstruction
+        # Decode coefficients for reconstructed audio
+        audio_out = self.sliCQ.decode(coefficients)
+
+        return audio_out
 
     def forward(self, audio, consistency=False):
         """
@@ -347,9 +356,9 @@ class TimbreTrap(nn.Module):
         transcription : Tensor (B x 2 x F X T)
           Batch of transcription coefficients
         transcription_rec : Tensor (B x 2 x F X T)
-          Batch of reconstructed coefficients for transcription coefficients
+          Batch of reconstructed coefficients for transcription
         transcription_scr : Tensor (B x 2 x F X T)
-          Batch of transcription coefficients for transcription coefficients
+          Batch of transcription coefficients for transcription
         losses : dict containing
           ...
         """
@@ -812,7 +821,7 @@ class TimbreTrapFiLM(TimbreTrap):
         embeddings : list of [Tensor (B x C x E x T)] or None (no skip connections)
           Embeddings produced by encoder at each level
         transcribe : bool
-          Switch for performing transcription vs. reconstruction
+          Switch for transcription vs. reconstruction
 
         Returns
         ----------
@@ -947,12 +956,12 @@ class TimbreTrapMag(TimbreTrap):
         embeddings : list of [Tensor (B x C x E x T)] or None (no skip connections)
           Embeddings produced by encoder at each level
         transcribe : bool
-          Switch for performing transcription vs. reconstruction
+          Switch for transcription vs. reconstruction
 
         Returns
         ----------
-        coefficients : Tensor (B x 2 x F X T)
-          Batch of output logits [-∞, ∞]
+        coefficients : Tensor (B x 1 x F X T)
+          Batch of output logits [0, ∞]
         """
 
         # Perform standard decoding steps
@@ -970,7 +979,7 @@ class TimbreTrapMag(TimbreTrap):
         Parameters
         ----------
         coefficients : Tensor (B x 1 x F X T)
-          Batch of transcription magnitude coefficients
+          Batch of transcription magnitude coefficients [0, ∞]
 
         Returns
         ----------
@@ -1030,12 +1039,12 @@ class TimbreTrapMagDB(TimbreTrapMag):
         embeddings : list of [Tensor (B x C x E x T)] or None (no skip connections)
           Embeddings produced by encoder at each level
         transcribe : bool
-          Switch for performing transcription vs. reconstruction
+          Switch for transcription vs. reconstruction
 
         Returns
         ----------
-        coefficients : Tensor (B x 2 x F X T)
-          Batch of output logits [-∞, ∞]
+        coefficients : Tensor (B x 1 x F X T)
+          Batch of output logits [0, 1]
         """
 
         # Perform standard decoding steps
@@ -1053,7 +1062,7 @@ class TimbreTrapMagDB(TimbreTrapMag):
         Parameters
         ----------
         coefficients : Tensor (B x 1 x F X T)
-          Batch of transcription magnitude coefficients
+          Batch of transcription magnitude coefficients [0, 1]
 
         Returns
         ----------

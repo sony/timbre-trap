@@ -205,6 +205,8 @@ class CQT(_CQT):
 
             # Decode the complex CQT coefficients
             audio = super().decode(coefficients)
+            # Normalize decoded audio with infinity norm
+            audio /= (audio.abs().max() + torch.finfo().eps)
 
         return audio
 
