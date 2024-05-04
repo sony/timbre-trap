@@ -164,14 +164,15 @@ class TimbreTrap(nn.Module):
           Batch of spectral coefficients [-∞, ∞]
         """
 
-        # Encode raw audio into latent vectors
-        latents, embeddings, _ = self.encode(audio)
+        with torch.no_grad():
+            # Encode raw audio into latent vectors
+            latents, embeddings, _ = self.encode(audio)
 
-        # Apply skip connections if they are turned on
-        embeddings = self.apply_skip_connections(embeddings)
+            # Apply skip connections if they are turned on
+            embeddings = self.apply_skip_connections(embeddings)
 
-        # Obtain coefficients with appropriate switch setting
-        coefficients = self.decode(latents, embeddings, transcribe)
+            # Obtain coefficients with appropriate switch setting
+            coefficients = self.decode(latents, embeddings, transcribe)
 
         return coefficients
 
@@ -195,9 +196,8 @@ class TimbreTrap(nn.Module):
         # Pad audio to next multiple of block length
         audio = self.sliCQ.pad_to_block_length(audio)
 
-        with torch.no_grad():
-            # Perform inference on the full-length audio
-            coefficients = self._inference(audio, transcribe)
+        # Perform inference on the full-length audio
+        coefficients = self._inference(audio, transcribe)
 
         return coefficients
 
@@ -226,46 +226,45 @@ class TimbreTrap(nn.Module):
         # Pad audio to next multiple of block length
         audio = self.sliCQ.pad_to_block_length(audio)
 
-        with torch.no_grad():
-            # Compute hop length for 50% overlap
-            hop_length = self.sliCQ.block_length // 2
-            # Pad both sides of audio to center first and last block
-            audio = torch.nn.functional.pad(audio, [hop_length] * 2)
-            # Determine total number of chunks to process
-            n_chunks = (audio.size(-1) - hop_length) // hop_length
+        # Compute hop length for 50% overlap
+        hop_length = self.sliCQ.block_length // 2
+        # Pad both sides of audio to center first and last block
+        audio = torch.nn.functional.pad(audio, [hop_length] * 2)
+        # Determine total number of chunks to process
+        n_chunks = (audio.size(-1) - hop_length) // hop_length
 
-            # Determine number of frames for each chunk
-            n_frames_chunk = self.sliCQ.max_window_length
-            # Initialize a function for windowing chunked output
-            window = torch.signal.windows.hann(n_frames_chunk, device=device)
+        # Determine number of frames for each chunk
+        n_frames_chunk = self.sliCQ.max_window_length
+        # Initialize a function for windowing chunked output
+        window = torch.signal.windows.hann(n_frames_chunk, device=device)
 
-            # Determine total number of frames corresponding to audio
-            n_frames = self.sliCQ.get_expected_frames(audio.size(-1))
-            # Initialize a Tensor of zeros for final output coefficients
-            coefficients = torch.zeros((B, 2, F, n_frames), device=device)
+        # Determine total number of frames corresponding to audio
+        n_frames = self.sliCQ.get_expected_frames(audio.size(-1))
+        # Initialize a Tensor of zeros for final output coefficients
+        coefficients = torch.zeros((B, 2, F, n_frames), device=device)
 
-            # Process chunks of audio iteratively and display a progress bar
-            for i in tqdm(range(n_chunks), position=0, leave=True, desc='\t\tprocessing chunks'):
-                # Compute sample boundaries for slice
-                sample_start = i * hop_length
-                sample_stop = sample_start + self.sliCQ.block_length
+        # Process chunks of audio iteratively and display a progress bar
+        for i in tqdm(range(n_chunks), position=0, leave=True, desc='\t\tprocessing chunks'):
+            # Compute sample boundaries for slice
+            sample_start = i * hop_length
+            sample_stop = sample_start + self.sliCQ.block_length
 
-                # Slice the next chunk of audio to block length
-                audio_chunk = audio[..., sample_start : sample_stop]
+            # Slice the next chunk of audio to block length
+            audio_chunk = audio[..., sample_start : sample_stop]
 
-                # Perform inference on the current chunk of audio
-                output_chunk = self._inference(audio_chunk, transcribe)
+            # Perform inference on the current chunk of audio
+            output_chunk = self._inference(audio_chunk, transcribe)
 
-                # Compute sample boundaries for slice
-                frame_start = i * n_frames_chunk // 2
-                frame_stop = frame_start + n_frames_chunk
+            # Compute sample boundaries for slice
+            frame_start = i * n_frames_chunk // 2
+            frame_stop = frame_start + n_frames_chunk
 
-                # Apply windowing and add chunk output to final output coefficients
-                coefficients[..., frame_start : frame_stop] += window * output_chunk
+            # Apply windowing and add chunk output to final output coefficients
+            coefficients[..., frame_start : frame_stop] += window * output_chunk
 
-            # Remove output frames corresponding to extra padding
-            coefficients = coefficients[..., n_frames_chunk // 2 :
-                                             -n_frames_chunk // 2]
+        # Remove output frames corresponding to extra padding
+        coefficients = coefficients[..., n_frames_chunk // 2 :
+                                         -n_frames_chunk // 2]
 
         return coefficients
 

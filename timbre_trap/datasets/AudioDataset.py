@@ -73,7 +73,7 @@ class AudioDataset(BaseDataset):
             audio = torchaudio.functional.resample(audio, fs, self.sample_rate)
 
             if audio.abs().max():
-                # Normalize the audio using infinity norm
+                # Normalize using infinity norm
                 audio /= audio.abs().max()
 
         except Exception as e:
