@@ -206,6 +206,10 @@ class CQT(_CQT):
             # Decode the complex CQT coefficients
             audio = super().decode(coefficients)
 
+            if audio.abs().max():
+                # Normalize using infinity norm
+                audio /= audio.abs().max()
+
         return audio
 
     def pad_to_block_length(self, audio):

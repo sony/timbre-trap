@@ -1,4 +1,3 @@
-from scipy.stats import hmean
 from copy import deepcopy
 from math import cos, pi
 
@@ -281,9 +280,6 @@ def log_gradient_norms(module, writer, i=0, prefix='gradients/norm'):
             writer.add_scalar(f'{prefix}/{layer}', grad_norm, i)
 
 
-EPSILON = sys.float_info.epsilon
-
-
 class MultipitchEvaluator(object):
     """
     A simple tracker to store results and compute statistics across an entire test set.
@@ -384,9 +380,11 @@ class MultipitchEvaluator(object):
         # Make keys lowercase and switch to regular dict type
         results = {k.lower(): results[k] for k in results.keys()}
 
-        # Calculate f1-score using harmonic mean formula
-        f_measure = hmean([results['precision'] + EPSILON,
-                           results['recall'] + EPSILON]) - EPSILON
+        # Extract precision and recall from results
+        pr, rc = results['precision'], results['recall']
+
+        # Compute f1-score as harmonic mean of precsion and recall
+        f_measure = 2 * pr * rc / (pr + rc + sys.float_info.epsilon)
 
         # Add f1-score to mir_eval results
         results.update({'f1-score' : f_measure})

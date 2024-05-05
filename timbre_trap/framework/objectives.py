@@ -55,11 +55,18 @@ def compute_transcription_loss(estimate, target, weight_positive_class=False):
     # Compute mean squared error between the estimated and ground-truth transcription
     transcription_loss = torch.nn.functional.mse_loss(estimate, target, reduction='none')
 
-    if weight_positive_class and target.any():
-        # Determine the inverse ratio between positive and negative activations
-        positive_weight = torch.sum(1 - target).item() / torch.sum(target).item()
-        # Scale transcription loss for positive targets
-        transcription_loss[target == 1] *= positive_weight
+    if weight_positive_class:
+        # Sum ground-truth and its complement for weights
+        positive_weight = torch.sum(target, dim=-2, keepdim=True)
+        negative_weight = torch.sum(1 - target, dim=-2, keepdim=True)
+        # Compute multi-class imbalance ratio for each frame
+        positive_scaling = negative_weight / (positive_weight + torch.finfo().eps)
+        # Determine scaling for each loss element
+        scaling = positive_scaling * (target == 1)
+        # Correct scaling for negative activations
+        scaling[scaling == 0] = 1
+        # Scale transcription loss
+        transcription_loss *= scaling
 
     # Sum transcription loss across frequency and average across time / batch
     transcription_loss = transcription_loss.sum(-2).mean()
