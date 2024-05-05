@@ -2,13 +2,14 @@
 Code for the paper "[Timbre-Trap: A Low-Resource Framework for Instrument-Agnostic Music Transcription](https://arxiv.org/abs/2309.15717)".
 This repository contains the following (and more):
 - Full Timbre-Trap framework
-  - [NSGT-based invertible Constant-Q Transform (CQT)](https://github.com/archinetai/cqt-pytorch) wrapper
+  - Wrapper for [NSGT-based invertible Constant-Q Transform (CQT)](https://github.com/archinetai/cqt-pytorch)
   - 2D autoencoder inspired by the [SoundStream](https://arxiv.org/abs/2107.03312) architecture
   - Transcription, reconstruction, and consistency objectives
 - Intuitive Multi-Pitch Estimation (MPE) and Automatic Music Transcription (AMT) dataset wrappers
 - Training and evaluation scripts sufficient to reproduce experiments
 
-Sonification and visualization demos are also available [here](https://sony.github.io/timbre-trap/).
+A dedicated [Hugging Face Space](https://huggingface.co/spaces/cwitkowitz/timbre-trap) is available for performing inference with Timbre-Trap.
+Audio samples and visualizations for some experiments in the paper can be found [here](https://sony.github.io/timbre-trap/).
 
 ## Installation
 Clone the repository, install the requirements, then install ```timbre-trap```:
@@ -85,6 +86,12 @@ model = TimbreTrap(sample_rate=22050,
 
 Under the hood this will also initialize a CQT module, accessible with ```model.cqt```, which provides several useful utilities.
 These include conversion between real-valued and complex-valued coefficients, synthesis of audio coefficients, and acquisition of times for each frame of coefficients.
+
+Weights for the [base model](https://huggingface.co/spaces/cwitkowitz/timbre-trap/blob/main/models/tt-orig.pt) from our paper are available for download within our dedicated [Hugging Face Space](Hugging Face).
+The weights can be loaded after initializing the appropriate model:
+```
+model.load_state_dict(torch.load(weights_path))
+```
 
 The script ```experiments/train.py``` exemplifies the training process for the framework.
 It should be run with ```experiments/``` as the current working directory.
